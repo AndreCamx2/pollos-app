@@ -6,8 +6,8 @@ fecha en el nombre; los archivos que ya se aplicaron no se editan.
 ## Aplicarlo en Supabase
 
 1. Crea dos proyectos: `pollos-dev` para probar y `pollos-app` para los datos reales.
-2. En cada uno: *SQL Editor* → *New query* → pega el contenido de
-   `migrations/20261110000000_esquema_inicial.sql` → *Run*.
+2. En cada uno: *SQL Editor* → *New query* → pega el contenido de cada archivo
+   de `migrations/`, uno por uno y en el orden de la fecha del nombre → *Run*.
 3. En *Authentication* → *Sign In / Providers*:
    - Deja activo *Email* y también *Confirm email*.
    - Apaga *Allow new users to sign up*. Así nadie crea cuenta por su cuenta;
@@ -44,6 +44,20 @@ Para abrir una granja más, solo creas la cuenta de su dueño.
 El dueño o un administrador llama `crear_invitacion(granja, 'trabajador')` y
 comparte el código de 8 letras. La otra persona llama `unirse_con_codigo(codigo)`.
 El código sirve una sola vez y vence a los 7 días.
+
+## Trabajar sin señal
+
+La app guarda todo primero en el celular y lo sube cuando hay internet. Para
+ponerse al día, cada celular pregunta qué cambió desde la última vez:
+
+- `cambiado_en` (en cada tabla del negocio) dice cuándo se creó o se editó la
+  fila por última vez.
+- `borrados` anota cada fila que se borra, porque una fila borrada no deja
+  rastro y los demás celulares la seguirían mostrando.
+
+Si dos personas sin señal hacen cosas que chocan (por ejemplo, abrir un lote
+en el mismo galpón), la base de datos acepta la primera que llegue y rechaza
+la otra; la app le muestra a esa persona el motivo para que lo corrija.
 
 ## Respaldos
 

@@ -217,6 +217,38 @@ select pruebas.debe_fallar(
          :'granja'),
   'ya está cerrado');
 
+-- Lo que se borra queda anotado para los celulares que estaban sin señal.
+insert into public.galpones (id, granja_id, nombre)
+values ('10000000-0000-0000-0000-000000000002', :'granja', 'Galpón 2');
+
+select pruebas.igual(
+  (select count(*) from public.galpones
+   where id = '10000000-0000-0000-0000-000000000002' and cambiado_en = creado_en),
+  1, 'una fila nueva cambió por última vez cuando se creó');
+
+update public.galpones set capacidad = 600 where id = '10000000-0000-0000-0000-000000000002';
+
+select pruebas.igual(
+  (select count(*) from public.galpones
+   where id = '10000000-0000-0000-0000-000000000002' and cambiado_en = actualizado_en),
+  1, 'al editarla, cambió por última vez cuando se editó');
+
+delete from public.galpones where id = '10000000-0000-0000-0000-000000000002';
+
+reset role;
+select set_config('request.jwt.claims', :beto, true);
+set local role authenticated;
+
+select pruebas.igual(
+  (select count(*) from public.borrados
+   where tabla = 'galpones' and fila_id = '10000000-0000-0000-0000-000000000002'),
+  1, 'un compañero se entera de que borraron el galpón');
+
+select pruebas.debe_fallar(
+  format($s$insert into public.borrados (tabla, fila_id, granja_id)
+            values ('lotes', gen_random_uuid(), %L)$s$, :'granja'),
+  'row-level security');
+
 -- Carla, de otra granja, no ve ni toca nada de Ana.
 reset role;
 select set_config('request.jwt.claims', :carla, true);
@@ -236,6 +268,15 @@ select pruebas.debe_fallar(
   format($s$insert into public.clientes (id, granja_id, nombre) values (gen_random_uuid(), %L, 'Intruso')$s$,
          :'granja'),
   'row-level security');
+
+select pruebas.igual((select count(*) from public.borrados), 0, 'otra granja no ve lo que borró Ana');
+
+insert into public.galpones (id, granja_id, nombre)
+select '10000000-0000-0000-0000-000000000003', id, 'Galpón 1' from public.granjas;
+
+select pruebas.igual(
+  pruebas.filas($s$delete from public.granjas$s$),
+  1, 'borrar la granja completa no tropieza con el registro de borrados');
 
 -- El código de Beto ya se usó.
 reset role;
