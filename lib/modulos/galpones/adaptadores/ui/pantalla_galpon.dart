@@ -426,7 +426,7 @@ class _Movimientos extends ConsumerWidget {
     // Sin señal no hay nombres, y basta con decir que lo anotó otra persona.
     final nombres = {
       for (final miembro in ref.watch(miembrosProvider(granja.id)).asData?.value ?? const <Miembro>[])
-        if (miembro.nombre case final nombre?) miembro.usuarioId: nombre,
+        miembro.usuarioId: ?miembro.nombre,
     };
     String quien(Registro registro) => switch (registro.creadoPor) {
           final id? when id == miId => 'registraste tú',
