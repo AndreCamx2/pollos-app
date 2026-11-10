@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'colores.dart';
+import 'espacios.dart';
+import 'icono_galpon.dart';
 import 'pulsable.dart';
 
 /// La fecha de hoy y el nombre de la granja, arriba de las pantallas
@@ -20,21 +23,24 @@ class EncabezadoGranja extends StatelessWidget {
   Widget build(BuildContext context) {
     final textos = Theme.of(context).textTheme;
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        const IconoGalpon(fondo: ColoresGranja.tinta, color: ColoresGranja.maiz),
+        const SizedBox(width: e12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(fechaLarga(DateTime.now()).toUpperCase(), style: textos.labelLarge),
-              const SizedBox(height: 4),
+              Text(
+                fechaLarga(DateTime.now()).toUpperCase(),
+                style: textos.labelLarge!.copyWith(color: ColoresGranja.textoSobreMaiz),
+              ),
               Pulsable(
                 onTap: alCambiarGranja,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Flexible(
-                      child: Text(nombre, style: textos.headlineSmall, maxLines: 2),
+                      child: Text(nombre, style: textos.titleLarge, maxLines: 2),
                     ),
                     if (alCambiarGranja != null)
                       const Icon(Icons.expand_more_rounded, size: 28),

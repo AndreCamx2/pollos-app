@@ -104,3 +104,39 @@ class BotonPrincipal extends StatelessWidget {
     );
   }
 }
+
+/// Para la acción que importa pero no es la principal de la pantalla.
+class BotonSecundario extends StatelessWidget {
+  const BotonSecundario({super.key, required this.texto, required this.onPressed});
+
+  final String texto;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Pulsable(
+      onTap: onPressed,
+      child: Container(
+        height: 56,
+        width: double.infinity,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: ColoresGranja.papel,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: ColoresGranja.tinta, width: 2),
+        ),
+        child: Text(
+          texto,
+          style: conPeso(
+            const TextStyle(
+              fontFamily: 'Figtree',
+              fontSize: 18,
+              color: ColoresGranja.tinta,
+            ),
+            700,
+          ),
+        ),
+      ),
+    );
+  }
+}
