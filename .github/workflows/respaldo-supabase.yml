@@ -1,0 +1,52 @@
+name: Respaldo de Supabase
+
+# Saca una copia cifrada de la base cada 3 días y la guarda 90 días en GitHub.
+# De paso, la consulta mantiene activo el proyecto para que Supabase no lo pause.
+#
+# Secretos (Settings > Secrets and variables > Actions):
+#   SUPABASE_DB_URL  cadena de conexión "Session pooler" del proyecto de producción
+#   CLAVE_RESPALDO   frase larga para cifrar; sin ella la copia no se puede abrir
+
+on:
+  schedule:
+    - cron: "17 13 */3 * *"
+  workflow_dispatch:
+
+jobs:
+  respaldo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        # bash explícito activa pipefail: si tar falla, no se sube una copia vacía.
+        shell: bash
+    steps:
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Sacar la copia
+        env:
+          URL_BASE: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          supabase db dump --remote="$URL_BASE" -f roles.sql --role-only
+          supabase db dump --remote="$URL_BASE" -f esquema.sql
+          supabase db dump --remote="$URL_BASE" -f datos.sql --use-copy --data-only \
+            -x "storage.buckets_vectors" -x "storage.vector_indexes"
+
+      - name: Cifrar
+        env:
+          CLAVE: ${{ secrets.CLAVE_RESPALDO }}
+        run: |
+          nombre="respaldo-pollos-$(date -u +%Y-%m-%d)"
+          tar czf - roles.sql esquema.sql datos.sql \
+            | gpg --batch --yes --pinentry-mode loopback --passphrase "$CLAVE" \
+                  --symmetric --cipher-algo AES256 -o "$nombre.tar.gz.gpg"
+          rm roles.sql esquema.sql datos.sql
+          echo "NOMBRE=$nombre" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.NOMBRE }}
+          path: ${{ env.NOMBRE }}.tar.gz.gpg
+          retention-days: 90
