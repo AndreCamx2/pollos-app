@@ -25,35 +25,36 @@ class LoteInvalido implements Exception {
 }
 
 /// Un lote es un grupo de pollos que llegó el mismo día a un galpón.
+/// Mientras está abierto ocupa el galpón; al cerrarlo, el galpón queda libre.
 class Lote {
   /// Arma un lote con datos que ya estaban guardados (por ejemplo, al leerlo
   /// de la base de datos). No valida, porque esos datos ya se validaron
   /// cuando el lote se creó con [Lote.nuevo].
   Lote.reconstruir({
     required this.id,
-    required this.galpon,
+    required this.granjaId,
+    required this.galponId,
     required DateTime fechaLlegada,
     required this.cantidadInicial,
     required this.precioCompraTotal,
+    this.cerradoEn,
   }) : fechaLlegada = _soloFecha(fechaLlegada);
 
-  /// Crea un lote nuevo revisando las reglas del negocio.
+  /// Crea un lote nuevo revisando las reglas del negocio. Con el [id] de un
+  /// lote que ya existe sirve para corregirlo.
   ///
   /// [hoy] se recibe como dato en vez de leer el reloj aquí adentro. Así las
   /// pruebas pueden decir "hoy es 10 de octubre" y el resultado siempre es
   /// el mismo.
   factory Lote.nuevo({
     required String id,
-    required String galpon,
+    required String granjaId,
+    required String galponId,
     required DateTime fechaLlegada,
     required int cantidadInicial,
     required int precioCompraTotal,
     required DateTime hoy,
   }) {
-    final nombre = galpon.trim();
-    if (nombre.isEmpty) {
-      throw const LoteInvalido('El galpón necesita un nombre.');
-    }
     if (cantidadInicial <= 0) {
       throw const LoteInvalido('La cantidad de pollos debe ser mayor que cero.');
     }
@@ -65,7 +66,8 @@ class Lote {
     }
     return Lote.reconstruir(
       id: id,
-      galpon: nombre,
+      granjaId: granjaId,
+      galponId: galponId,
       fechaLlegada: fechaLlegada,
       cantidadInicial: cantidadInicial,
       precioCompraTotal: precioCompraTotal,
@@ -73,9 +75,8 @@ class Lote {
   }
 
   final String id;
-
-  /// Nombre del galpón donde vive el lote, por ejemplo "Galpón 1".
-  final String galpon;
+  final String granjaId;
+  final String galponId;
 
   /// Día en que llegaron los pollos (sin hora).
   final DateTime fechaLlegada;
@@ -87,6 +88,33 @@ class Lote {
   /// La plata se guarda en enteros (pesos completos), nunca con decimales,
   /// para evitar errores de redondeo.
   final int precioCompraTotal;
+
+  /// Cuándo se cerró; null mientras el lote sigue en el galpón.
+  final DateTime? cerradoEn;
+
+  bool get abierto => cerradoEn == null;
+
+  Lote cerrar(DateTime ahora) => _conCierre(ahora);
+
+  Lote reabrir() => _conCierre(null);
+
+  Lote _conCierre(DateTime? cierre) => Lote.reconstruir(
+        id: id,
+        granjaId: granjaId,
+        galponId: galponId,
+        fechaLlegada: fechaLlegada,
+        cantidadInicial: cantidadInicial,
+        precioCompraTotal: precioCompraTotal,
+        cerradoEn: cierre,
+      );
+
+  int get costoPorPollito => (precioCompraTotal / cantidadInicial).round();
+
+  /// El día 22 toca pasar a alimento de engorde.
+  DateTime get fechaCambioAEngorde => fechaLlegada.add(const Duration(days: 22));
+
+  /// Los pollos salen a la venta cerca del día 45.
+  DateTime get fechaDeVenta => fechaLlegada.add(const Duration(days: 45));
 
   /// Días que lleva el lote desde que llegó. El día de llegada es el día 0.
   int diasDeEdad(DateTime hoy) =>
@@ -114,8 +142,8 @@ class Lote {
     return quedan;
   }
 
-  /// El lote se cierra cuando ya no quedan pollos vivos.
-  bool estaCerrado({required int muertos, required int vendidos}) =>
+  /// Cuando ya no quedan pollos vivos el lote está listo para cerrarse.
+  bool sinPollos({required int muertos, required int vendidos}) =>
       vivos(muertos: muertos, vendidos: vendidos) == 0;
 
   // Dos lotes son el mismo si tienen el mismo id.
