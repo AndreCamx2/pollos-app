@@ -26,6 +26,14 @@ void main() {
     expect(mensajeDeError(error), 'Ya existe uno con ese nombre.');
   });
 
+  test('explica cuando el galpón ya tiene un lote abierto', () {
+    final error = PostgrestException(
+      message: 'duplicate key value violates unique constraint "un_lote_abierto_por_galpon"',
+      code: '23505',
+    );
+    expect(mensajeDeError(error), 'Ese galpón ya tiene un lote abierto.');
+  });
+
   test('avisa cuando no hay internet', () {
     expect(
       mensajeDeError(const SocketException('Failed host lookup')),
