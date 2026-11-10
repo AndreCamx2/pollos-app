@@ -19,6 +19,7 @@ class CampoGranja extends StatelessWidget {
     this.teclado,
     this.formatos,
     this.mayusculas = TextCapitalization.none,
+    this.lineas = 1,
   });
 
   final String etiqueta;
@@ -29,6 +30,9 @@ class CampoGranja extends StatelessWidget {
   final TextInputType? teclado;
   final List<TextInputFormatter>? formatos;
   final TextCapitalization mayusculas;
+
+  /// Más de una para notas.
+  final int lineas;
 
   @override
   Widget build(BuildContext context) {
@@ -58,6 +62,8 @@ class CampoGranja extends StatelessWidget {
           keyboardType: teclado,
           inputFormatters: formatos,
           textCapitalization: mayusculas,
+          minLines: lineas > 1 ? 2 : null,
+          maxLines: lineas,
           style: conPeso(
             textos.bodyLarge!.copyWith(
               fontSize: 20,

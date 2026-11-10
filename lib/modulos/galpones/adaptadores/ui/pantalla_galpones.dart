@@ -10,7 +10,7 @@ import '../../../../compartido/diseno/encabezado_granja.dart';
 import '../../../../compartido/diseno/encabezado_maiz.dart';
 import '../../../../compartido/diseno/espacios.dart';
 import '../../../../compartido/diseno/estado_error.dart';
-import '../../../../compartido/diseno/icono_galpon.dart';
+import '../../../../compartido/diseno/icono_modulo.dart';
 import '../../../../compartido/diseno/pulsable.dart';
 import '../../../../compartido/diseno/tarjeta_ticket.dart';
 import '../../../../compartido/diseno/tema.dart';
@@ -108,14 +108,9 @@ class _ResumenGranja extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final abiertos = [
-      for (final galpon in galpones) ?galpon.lote,
+      for (final galpon in galpones) ?galpon.cuentas,
     ];
-    // shortcut: los muertos y las ventas llegan en la parte 4; hasta entonces
-    // siguen vivos todos los que llegaron.
-    final vivos = abiertos.fold(
-      0,
-      (suma, lote) => suma + lote.vivos(muertos: 0, vendidos: 0),
-    );
+    final vivos = abiertos.fold(0, (suma, cuentas) => suma + cuentas.vivos);
     final libres = galpones.length - abiertos.length;
     return TarjetaTicket(
       child: Row(
@@ -151,7 +146,7 @@ class _TarjetaGalpon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textos = Theme.of(context).textTheme;
-    final (:galpon, :lote) = item;
+    final (:galpon, :lote, :cuentas) = item;
     final hoy = DateTime.now();
     final dias = lote?.diasDeEdad(hoy);
     final etapa = lote?.etapaAlimento(hoy);
@@ -172,15 +167,17 @@ class _TarjetaGalpon extends StatelessWidget {
             Row(
               children: [
                 switch (etapa) {
-                  null => const IconoGalpon(
+                  null => const IconoModulo(
+                      Figura.galpon,
                       fondo: ColoresGranja.pastoClaro,
                       color: ColoresGranja.pasto,
                     ),
-                  EtapaAlimento.engorde => const IconoGalpon(
+                  EtapaAlimento.engorde => const IconoModulo(
+                      Figura.galpon,
                       fondo: ColoresGranja.graneroClaro,
                       color: ColoresGranja.granero,
                     ),
-                  _ => const IconoGalpon(),
+                  _ => const IconoModulo(Figura.galpon),
                 },
                 const SizedBox(width: e12),
                 Expanded(
@@ -189,8 +186,9 @@ class _TarjetaGalpon extends StatelessWidget {
                     children: [
                       Text(galpon.nombre, style: textos.titleMedium, maxLines: 2),
                       Text(
-                        lote != null
-                            ? '${miles(lote.vivos(muertos: 0, vendidos: 0))} vivos'
+                        cuentas != null
+                            ? '${miles(cuentas.vivos)} vivos · '
+                                '${decimal(cuentas.mortalidad)} % mortalidad'
                             : caben != null
                                 ? 'Libre · caben ${miles(caben)} pollos'
                                 : 'Libre · listo para recibir pollitos',
@@ -218,7 +216,7 @@ class _TarjetaGalpon extends StatelessWidget {
               const SizedBox(height: e12),
               BarraEtapa(dias: dias),
             ],
-            if (etapa == EtapaAlimento.cambio) ...[
+            if (cuentas?.tocaCambiarAEngorde(hoy) ?? false) ...[
               const SizedBox(height: e12),
               const AvisoAtencion('Toca cambiar a alimento de engorde'),
             ],

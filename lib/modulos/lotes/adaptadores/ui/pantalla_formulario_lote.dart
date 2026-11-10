@@ -11,9 +11,11 @@ import '../../../../compartido/diseno/espacios.dart';
 import '../../../../compartido/diseno/estado_error.dart';
 import '../../../../compartido/diseno/hoja_confirmar.dart';
 import '../../../../compartido/diseno/pulsable.dart';
+import '../../../../compartido/diseno/selector_fecha.dart';
 import '../../../../compartido/diseno/tarjeta_ticket.dart';
 import '../../../../compartido/diseno/tema.dart';
 import '../../../../compartido/formato.dart';
+import '../../../registros/dominio/cuentas_lote.dart';
 import '../../dominio/lote.dart';
 
 /// Registrar los pollitos que llegaron, o corregir un lote que ya existe.
@@ -87,12 +89,31 @@ class _PantallaFormularioLoteState extends ConsumerState<PantallaFormularioLote>
       );
       return;
     }
+    final original = _original;
+    if (original != null) {
+      final cuentas = _cuentas(original);
+      final primero = cuentas.primerRegistro;
+      if (pollitos < cuentas.muertos + cuentas.vendidos) {
+        setState(
+          () => _error = 'Ya salieron ${miles(cuentas.muertos + cuentas.vendidos)} '
+              'pollos de este lote entre muertos y vendidos.',
+        );
+        return;
+      }
+      if (primero != null &&
+          DateTime.utc(_llegada.year, _llegada.month, _llegada.day).isAfter(primero)) {
+        setState(
+          () => _error = 'Hay registros desde el ${fechaCorta(primero)}: '
+              'los pollitos tuvieron que llegar antes.',
+        );
+        return;
+      }
+    }
     setState(() {
       _guardando = true;
       _error = null;
     });
     try {
-      final original = _original;
       if (original == null) {
         await ref.read(crearLoteProvider)(
           granjaId: granja.id,
@@ -123,8 +144,9 @@ class _PantallaFormularioLoteState extends ConsumerState<PantallaFormularioLote>
     }
   }
 
-  // shortcut: hoy un lote no tiene nada colgado; cuando existan alimento,
-  // muertos y ventas (parte 4) solo se podrá borrar si está vacío.
+  CuentasLote _cuentas(Lote lote) =>
+      CuentasLote(lote, ref.read(registrosProvider).asData?.value ?? const []);
+
   Future<void> _borrar(Lote lote) async {
     final acepto = await confirmar(
       context,
@@ -173,7 +195,7 @@ class _PantallaFormularioLoteState extends ConsumerState<PantallaFormularioLote>
                         spacing: e12,
                         runSpacing: e12,
                         children: [
-                          for (final (:galpon, :lote) in galpones)
+                          for (final (:galpon, :lote, cuentas: _) in galpones)
                             SizedBox(
                               width: (medidas.maxWidth - e12) / 2,
                               child: _OpcionGalpon(
@@ -212,7 +234,7 @@ class _PantallaFormularioLoteState extends ConsumerState<PantallaFormularioLote>
                 const SizedBox(height: e16),
                 Text('Fecha de llegada', style: conPeso(textos.bodyMedium!, 700)),
                 const SizedBox(height: e8),
-                _SelectorFecha(
+                SelectorFecha(
                   fecha: _llegada,
                   alCambiar: (fecha) => setState(() => _llegada = fecha),
                 ),
@@ -240,7 +262,8 @@ class _PantallaFormularioLoteState extends ConsumerState<PantallaFormularioLote>
                   cargando: _guardando,
                   onPressed: _guardar,
                 ),
-                if (original != null)
+                // Un lote con registros no se borra: se corrige o se cierra.
+                if (original != null && !_cuentas(original).tieneRegistros)
                   Center(
                     child: TextButton(
                       onPressed: () => _borrar(original),
@@ -310,59 +333,6 @@ class _OpcionGalpon extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// Los pollitos casi siempre llegaron hoy o hace pocos días, así que la
-/// fecha se mueve de a un día con dos botones grandes.
-class _SelectorFecha extends StatelessWidget {
-  const _SelectorFecha({required this.fecha, required this.alCambiar});
-
-  final DateTime fecha;
-  final ValueChanged<DateTime> alCambiar;
-
-  @override
-  Widget build(BuildContext context) {
-    final ahora = DateTime.now();
-    final hoy = DateTime(ahora.year, ahora.month, ahora.day);
-    final haceDias = hoy.difference(fecha).inDays;
-    final corta = fechaCorta(fecha);
-    return Container(
-      height: 56,
-      decoration: BoxDecoration(
-        color: ColoresGranja.papel,
-        borderRadius: BorderRadius.circular(radioCampo),
-        border: Border.all(color: ColoresGranja.borde),
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            tooltip: 'Un día antes',
-            icon: const Icon(Icons.chevron_left_rounded, size: 28),
-            onPressed: () =>
-                alCambiar(DateTime(fecha.year, fecha.month, fecha.day - 1)),
-          ),
-          Expanded(
-            child: Text(
-              switch (haceDias) {
-                0 => 'Hoy, $corta',
-                1 => 'Ayer, $corta',
-                _ => '$corta · hace $haceDias días',
-              },
-              textAlign: TextAlign.center,
-              style: conPeso(Theme.of(context).textTheme.bodyLarge!, 700),
-            ),
-          ),
-          IconButton(
-            tooltip: 'Un día después',
-            icon: const Icon(Icons.chevron_right_rounded, size: 28),
-            onPressed: haceDias <= 0
-                ? null
-                : () => alCambiar(DateTime(fecha.year, fecha.month, fecha.day + 1)),
-          ),
-        ],
       ),
     );
   }
