@@ -33,19 +33,52 @@ const columnasLocales = {
     'cerrado_en',
     ...columnasDeAutoria,
   ],
+  'compras_alimento': [
+    'id',
+    'granja_id',
+    'lote_id',
+    'fecha',
+    'tipo',
+    'marca',
+    'kilos_por_bulto',
+    'bultos',
+    'precio_por_bulto',
+    ...columnasDeAutoria,
+  ],
+  'mortalidad': [
+    'id',
+    'granja_id',
+    'lote_id',
+    'fecha',
+    'cantidad',
+    'causa',
+    'nota',
+    ...columnasDeAutoria,
+  ],
+  'medicamentos': [
+    'id',
+    'granja_id',
+    'lote_id',
+    'fecha',
+    'nombre',
+    'costo',
+    'nota',
+    ...columnasDeAutoria,
+  ],
 };
 
 enum Operacion { guardar, borrar }
 
 /// Un cambio hecho en el celular que todavía no está en el servidor.
-/// [error] trae el motivo cuando el servidor lo rechazó. [cambio] sube cada
-/// vez que la persona vuelve a tocar la misma fila.
+/// [datos] es la fila tal como quedó con ese cambio (null si es un borrado).
+/// [error] trae el motivo cuando el servidor lo rechazó.
 typedef Pendiente = ({
   int orden,
   int cambio,
   String tabla,
   String filaId,
   Operacion operacion,
+  Map<String, Object?>? datos,
   String titulo,
   String? error,
 });
@@ -58,32 +91,46 @@ class BaseLocal {
   final Database _db;
 
   static Future<BaseLocal> abrir() async => BaseLocal(
-        await openDatabase('pollos.db', version: 1, onCreate: crearTablas),
+        await openDatabase(
+          'pollos.db',
+          version: 2,
+          onCreate: crearTablas,
+          onUpgrade: actualizarTablas,
+        ),
       );
 
   static Future<void> crearTablas(Database db, int version) async {
     for (final MapEntry(key: tabla, value: columnas) in columnasLocales.entries) {
       await db.execute(
-        'create table $tabla (id text primary key, ${columnas.skip(1).join(', ')})',
+        'create table if not exists $tabla '
+        '(id text primary key, ${columnas.skip(1).join(', ')})',
       );
     }
-    // Una sola fila por registro: si se toca dos veces antes de subir, se
-    // manda una vez con lo último.
+    // La cola guarda cada cambio con la fila como quedó en ese momento y se
+    // sube en el mismo orden en que se hizo.
     await db.execute('''
-      create table pendientes (
+      create table if not exists pendientes (
         orden integer primary key autoincrement,
         granja_id text not null,
         tabla text not null,
         fila_id text not null,
         operacion text not null,
+        datos text,
         titulo text not null,
         cambio integer not null default 0,
-        error text,
-        unique (tabla, fila_id)
+        error text
       )''');
     await db.execute(
-      'create table datos_guardados (clave text primary key, valor text not null)',
+      'create table if not exists datos_guardados '
+      '(clave text primary key, valor text not null)',
     );
+  }
+
+  static Future<void> actualizarTablas(Database db, int anterior, int nueva) async {
+    // La cola de la versión 1 no guardaba la fila de cada cambio. Solo
+    // existió en celulares de prueba, así que se arma de nuevo.
+    if (anterior < 2) await db.execute('drop table if exists pendientes');
+    await crearTablas(db, nueva);
   }
 
   Future<void> cerrar() => _db.close();
@@ -119,22 +166,46 @@ class BaseLocal {
             'creado_en': DateTime.now().toUtc().toIso8601String(),
           });
         }
-        // Si ya estaba en la cola conserva su turno: un lote nuevo debe subir
-        // después de su galpón aunque el galpón se haya corregido luego.
-        await tx.rawInsert(
-          'insert or ignore into pendientes (granja_id, tabla, fila_id, operacion, titulo) '
-          "values (?, ?, ?, 'guardar', ?)",
-          [fila['granja_id'], tabla, id, titulo],
+        // Esta versión reemplaza lo que el servidor había rechazado de la fila.
+        await tx.delete(
+          'pendientes',
+          where: 'tabla = ? and fila_id = ? and error is not null',
+          whereArgs: [tabla, id],
         );
-        await tx.rawUpdate(
-          "update pendientes set operacion = 'guardar', titulo = ?, error = null, "
-          'cambio = cambio + 1 where tabla = ? and fila_id = ?',
-          [titulo, tabla, id],
-        );
+        final ultimo = (await tx.query(
+          'pendientes',
+          where: 'granja_id = ?',
+          whereArgs: [fila['granja_id']],
+          orderBy: 'orden desc',
+          limit: 1,
+        ))
+            .firstOrNull;
+        // Corregir lo último que se hizo no necesita otro envío. Si después
+        // vino otra cosa, va al final: cerrar un lote tiene que subir después
+        // de lo que se anotó en él.
+        if (ultimo != null &&
+            ultimo['tabla'] == tabla &&
+            ultimo['fila_id'] == id &&
+            ultimo['operacion'] == Operacion.guardar.name) {
+          await tx.rawUpdate(
+            'update pendientes set datos = ?, titulo = ?, cambio = cambio + 1 '
+            'where orden = ?',
+            [jsonEncode(fila), titulo, ultimo['orden']],
+          );
+        } else {
+          await tx.insert('pendientes', {
+            'granja_id': fila['granja_id'],
+            'tabla': tabla,
+            'fila_id': id,
+            'operacion': Operacion.guardar.name,
+            'datos': jsonEncode(fila),
+            'titulo': titulo,
+          });
+        }
       });
 
-  /// Borra la fila del celular y deja el borrado al final de la cola, para
-  /// que suba después de los borrados de lo que dependía de ella.
+  /// Borra la fila del celular y deja el borrado al final de la cola. Lo que
+  /// faltaba por subir de esa fila ya no hace falta.
   Future<void> borrarFila(
     String tabla,
     String id, {
@@ -177,6 +248,10 @@ class BaseLocal {
           tabla: f['tabla']! as String,
           filaId: f['fila_id']! as String,
           operacion: Operacion.values.byName(f['operacion']! as String),
+          datos: switch (f['datos']) {
+            final String datos => jsonDecode(datos) as Map<String, Object?>,
+            _ => null,
+          },
           titulo: f['titulo']! as String,
           error: f['error'] as String?,
         ),
@@ -217,11 +292,15 @@ class BaseLocal {
         whereArgs: [pendiente.orden],
       );
 
-  /// Saca el cambio de la cola y deja la fila como está en el servidor
+  /// Saca de la cola todo lo de esa fila y la deja como está en el servidor
   /// ([enServidor] null si allá no existe).
   Future<void> descartar(Pendiente pendiente, Map<String, dynamic>? enServidor) =>
       _db.transaction((tx) async {
-        await tx.delete('pendientes', where: 'orden = ?', whereArgs: [pendiente.orden]);
+        await tx.delete(
+          'pendientes',
+          where: 'tabla = ? and fila_id = ?',
+          whereArgs: [pendiente.tabla, pendiente.filaId],
+        );
         if (enServidor == null) {
           await tx.delete(
             pendiente.tabla,

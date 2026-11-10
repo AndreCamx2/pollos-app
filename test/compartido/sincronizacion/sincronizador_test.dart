@@ -12,10 +12,12 @@ const granja = 'granja-1';
 /// Un servidor de mentira: guarda en memoria, pone autor y fechas como lo
 /// hace Supabase y se le puede quitar la señal.
 class RemotoDePrueba implements Remoto {
-  final tablas = <String, Map<String, Map<String, dynamic>>>{
-    'galpones': {},
-    'lotes': {},
+  final tablas = {
+    for (final tabla in columnasLocales.keys) tabla: <String, Map<String, dynamic>>{},
   };
+
+  /// Lo que llegó, en el orden en que llegó: "tabla:id".
+  final llegadas = <String>[];
   final _borrados = <Map<String, dynamic>>[];
   var _reloj = DateTime.utc(2026, 10, 10, 8);
 
@@ -64,6 +66,7 @@ class RemotoDePrueba implements Remoto {
     if (rechazo != null) throw rechazo;
     otroGuarda(tabla, fila);
     guardadas++;
+    llegadas.add('$tabla:${fila['id']}');
     if (cortarDespuesDeGuardar) {
       cortarDespuesDeGuardar = false;
       throw const SocketException('Connection reset');
@@ -314,6 +317,44 @@ void main() {
     );
 
     expect((await local.cuentaPendientes(granja)).porSubir, 1);
+  });
+
+  test('cerrar un lote sube después de lo que se anotó en él', () async {
+    final lote = {
+      'id': 'l1',
+      'granja_id': granja,
+      'galpon_id': 'g1',
+      'fecha_llegada': '2026-09-17',
+      'cantidad_inicial': 500,
+      'precio_compra_total': 1750000,
+      'cerrado_en': null,
+    };
+    await local.guardarFila('lotes', lote, titulo: 'Lote', autor: 'ana');
+    await local.guardarFila(
+      'mortalidad',
+      {
+        'id': 'm1',
+        'granja_id': granja,
+        'lote_id': 'l1',
+        'fecha': '2026-10-06',
+        'cantidad': 3,
+        'causa': 'calor',
+        'nota': null,
+      },
+      titulo: '3 muertos',
+      autor: 'ana',
+    );
+    await local.guardarFila(
+      'lotes',
+      {...lote, 'cerrado_en': '2026-11-01T21:00:00.000Z'},
+      titulo: 'Lote',
+      autor: 'ana',
+    );
+
+    await sincronizador.sincronizar(granja);
+
+    expect(remoto.llegadas, ['lotes:l1', 'mortalidad:m1', 'lotes:l1']);
+    expect(remoto.tablas['lotes']!['l1']!['cerrado_en'], isNotNull);
   });
 
   test('lo guardado en el celular sobrevive entre una lectura y otra', () async {
