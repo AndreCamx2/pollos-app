@@ -31,16 +31,10 @@ class Sincronizador {
   Future<void> _subir(String granjaId) async {
     for (final pendiente in await _local.pendientes(granjaId)) {
       try {
-        if (pendiente.operacion == Operacion.borrar) {
-          await _remoto.borrar(pendiente.tabla, pendiente.filaId);
+        if (pendiente.datos case final fila?) {
+          await _remoto.guardar(pendiente.tabla, fila);
         } else {
-          final fila = await _local.fila(pendiente.tabla, pendiente.filaId);
-          if (fila != null) {
-            await _remoto.guardar(pendiente.tabla, {
-              for (final MapEntry(key: columna, value: valor) in fila.entries)
-                if (!columnasDeAutoria.contains(columna)) columna: valor,
-            });
-          }
+          await _remoto.borrar(pendiente.tabla, pendiente.filaId);
         }
         await _local.quitarPendiente(pendiente);
       } on PostgrestException catch (e) {

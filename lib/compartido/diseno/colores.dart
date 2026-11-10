@@ -15,6 +15,11 @@ abstract final class ColoresGranja {
   static const pasto = Color(0xFF2F6B3A);
   static const pastoClaro = Color(0xFFE2EFDF);
 
+  /// Solo para medicina.
+  static const lila = Color(0xFFB9A8F2);
+  static const lilaClaro = Color(0xFFECE8FB);
+  static const lilaOscuro = Color(0xFF5B4BB0);
+
   static const tinta = Color(0xFF2B211A);
   static const tintaSuave = Color(0xFF6B5D52);
   static const textoSobreTinta = Color(0xFFCDBFAF);

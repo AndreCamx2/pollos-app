@@ -11,6 +11,9 @@ import '../modulos/granja/adaptadores/ui/pantalla_entrar.dart';
 import '../modulos/granja/adaptadores/ui/pantalla_personas.dart';
 import '../modulos/granja/adaptadores/ui/pantalla_sin_granja.dart';
 import '../modulos/lotes/adaptadores/ui/pantalla_formulario_lote.dart';
+import '../modulos/registros/adaptadores/ui/pantalla_compra_alimento.dart';
+import '../modulos/registros/adaptadores/ui/pantalla_medicina.dart';
+import '../modulos/registros/adaptadores/ui/pantalla_muertos.dart';
 import 'proveedores.dart';
 
 const _deEntrada = {'/cargando', '/entrar', '/completar-cuenta', '/sin-granja'};
@@ -64,6 +67,26 @@ final rutasProvider = Provider<GoRouter>((ref) {
             builder: (_, estado) =>
                 PantallaFormularioLote(loteId: estado.pathParameters['id']),
           ),
+          for (final (camino, pantalla) in <(String, Widget Function({required String loteId, String? registroId}))>[
+            ('alimento', PantallaCompraAlimento.new),
+            ('muertos', PantallaMuertos.new),
+            ('medicina', PantallaMedicina.new),
+          ])
+            GoRoute(
+              path: 'lotes/:lote/$camino',
+              builder: (_, estado) => pantalla(
+                loteId: estado.pathParameters['lote']!,
+              ),
+              routes: [
+                GoRoute(
+                  path: ':registro',
+                  builder: (_, estado) => pantalla(
+                    loteId: estado.pathParameters['lote']!,
+                    registroId: estado.pathParameters['registro'],
+                  ),
+                ),
+              ],
+            ),
         ],
       ),
     ],

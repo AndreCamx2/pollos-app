@@ -10,13 +10,19 @@ import '../../../../compartido/diseno/encabezado_maiz.dart';
 import '../../../../compartido/diseno/espacios.dart';
 import '../../../../compartido/diseno/estado_error.dart';
 import '../../../../compartido/diseno/hoja_confirmar.dart';
+import '../../../../compartido/diseno/icono_modulo.dart';
 import '../../../../compartido/diseno/pulsable.dart';
 import '../../../../compartido/diseno/tarjeta_ticket.dart';
+import '../../../../compartido/diseno/tema.dart';
 import '../../../../compartido/formato.dart';
+import '../../../granja/dominio/granja.dart';
 import '../../../lotes/dominio/lote.dart';
+import '../../../registros/dominio/cuentas_lote.dart';
+import '../../../registros/dominio/registro.dart';
 import '../../dominio/galpon.dart';
 
-/// Un galpón por dentro: el lote que tiene hoy y los que ya pasaron por él.
+/// Un galpón por dentro: el lote que tiene hoy, lo que se ha anotado en él y
+/// los lotes que ya pasaron.
 class PantallaGalpon extends ConsumerWidget {
   const PantallaGalpon({super.key, required this.galponId});
 
@@ -32,7 +38,7 @@ class PantallaGalpon extends ConsumerWidget {
     final encontrado = galpones.where((g) => g.galpon.id == galponId).firstOrNull;
     if (encontrado == null) return const _GalponBorrado();
 
-    final (:galpon, :lote) = encontrado;
+    final (:galpon, :lote, :cuentas) = encontrado;
     final anteriores = [
       for (final l in ref.watch(lotesProvider).asData?.value ?? const <Lote>[])
         if (l.galponId == galponId && !l.abierto) l,
@@ -46,9 +52,9 @@ class PantallaGalpon extends ConsumerWidget {
         padding: const EdgeInsets.only(bottom: e24),
         children: [
           EncabezadoMaiz(
-            tarjeta: lote == null || dias == null
+            tarjeta: lote == null || cuentas == null || dias == null
                 ? _GalponLibre(galpon)
-                : _LoteDeHoy(lote: lote, dias: dias),
+                : _LoteDeHoy(cuentas: cuentas, dias: dias),
             child: TitularPantalla(
               titulo: galpon.nombre,
               subtitulo: lote == null
@@ -65,27 +71,28 @@ class PantallaGalpon extends ConsumerWidget {
                   : null,
             ),
           ),
-          if (lote != null) ...[
-            // shortcut: el alimento y la medicina se suman aquí en la parte 4.
+          if (lote != null && cuentas != null) ...[
             Padding(
               padding: const EdgeInsets.fromLTRB(e16, e12, e16, 0),
-              child: TarjetaTicket(
-                child: CifraTicket(
-                  etiqueta: 'Invertido hasta hoy',
-                  cifra: plata(lote.precioCompraTotal),
-                  detalle: '${miles(lote.cantidadInicial)} pollitos a '
-                      '${plata(lote.costoPorPollito)} cada uno',
-                ),
-              ),
+              child: _Invertido(cuentas),
             ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(e20, e24, e20, e12),
+              child: Text('Registrar', style: textos.titleLarge),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: e16),
+              child: _BotonesRegistrar(loteId: lote.id),
+            ),
+            _Movimientos(granja: granja, loteId: lote.id),
             if (administra)
               Padding(
-                padding: const EdgeInsets.fromLTRB(e16, e20, e16, 0),
+                padding: const EdgeInsets.fromLTRB(e16, e24, e16, 0),
                 child: Column(
                   children: [
                     BotonSecundario(
                       texto: 'Cerrar lote',
-                      onPressed: () => _cerrar(context, ref, galpon, lote),
+                      onPressed: () => _cerrar(context, ref, galpon, cuentas),
                     ),
                     TextButton(
                       onPressed: () => context.push('/lotes/${lote.id}/editar'),
@@ -109,33 +116,18 @@ class PantallaGalpon extends ConsumerWidget {
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: e16),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: ColoresGranja.papel,
-                  borderRadius: BorderRadius.circular(radioTarjeta),
-                  border: Border.all(color: ColoresGranja.borde),
-                ),
-                child: Column(
-                  children: [
-                    for (final (i, anterior) in anteriores.indexed) ...[
-                      if (i > 0)
-                        const Divider(
-                          height: 1,
-                          indent: e16,
-                          endIndent: e16,
-                          color: ColoresGranja.borde,
-                        ),
-                      _FilaLoteAnterior(
-                        lote: anterior,
-                        // Solo el último, y solo si el galpón sigue libre:
-                        // dos lotes abiertos no caben en un galpón.
-                        alReabrir: administra && lote == null && i == 0
-                            ? () => _reabrir(context, ref, galpon, anterior)
-                            : null,
-                      ),
-                    ],
-                  ],
-                ),
+              child: _Lista(
+                filas: [
+                  for (final (i, anterior) in anteriores.indexed)
+                    _FilaLoteAnterior(
+                      lote: anterior,
+                      // Solo el último, y solo si el galpón sigue libre:
+                      // dos lotes abiertos no caben en un galpón.
+                      alReabrir: administra && lote == null && i == 0
+                          ? () => _reabrir(context, ref, galpon, anterior)
+                          : null,
+                    ),
+                ],
               ),
             ),
           ],
@@ -148,17 +140,22 @@ class PantallaGalpon extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     Galpon galpon,
-    Lote lote,
+    CuentasLote cuentas,
   ) async {
+    final quedan = cuentas.vivos;
     final acepto = await confirmar(
       context,
       titulo: '¿Cerrar el lote de ${galpon.nombre}?',
-      detalle: 'Ya no se podrá registrar nada en este lote y el galpón queda '
-          'libre para pollitos nuevos. Si fue un error, lo puedes reabrir.',
+      detalle: [
+        if (quedan > 0)
+          'Todavía quedan ${miles(quedan)} pollos vivos en las cuentas del lote.',
+        'Ya no se podrá anotar nada en este lote y el galpón queda libre para '
+            'pollitos nuevos. Si fue un error, lo puedes reabrir.',
+      ].join(' '),
       accion: 'Cerrar lote',
     );
     if (!acepto) return;
-    await ref.read(repositorioLotesProvider).guardar(lote.cerrar(DateTime.now()));
+    await ref.read(repositorioLotesProvider).guardar(cuentas.lote.cerrar(DateTime.now()));
     await ref.read(sincronizacionProvider.notifier).huboCambios();
   }
 
@@ -181,31 +178,416 @@ class PantallaGalpon extends ConsumerWidget {
 }
 
 class _LoteDeHoy extends StatelessWidget {
-  const _LoteDeHoy({required this.lote, required this.dias});
+  const _LoteDeHoy({required this.cuentas, required this.dias});
 
-  final Lote lote;
+  final CuentasLote cuentas;
   final int dias;
 
   @override
   Widget build(BuildContext context) {
     final textos = Theme.of(context).textTheme;
+    Widget columna(String cifra, String etiqueta, {Color? color}) => Expanded(
+          child: Column(
+            children: [
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(cifra, style: textos.headlineSmall!.copyWith(color: color)),
+              ),
+              Text(etiqueta, style: textos.bodySmall, textAlign: TextAlign.center),
+            ],
+          ),
+        );
+
     return _TarjetaPapel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text.rich(
-            TextSpan(
-              // shortcut: sin muertos ni ventas hasta la parte 4.
-              text: miles(lote.vivos(muertos: 0, vendidos: 0)),
-              style: textos.displaySmall,
-              children: [TextSpan(text: ' vivos', style: textos.bodySmall)],
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              columna(miles(cuentas.vivos), 'vivos'),
+              columna(
+                miles(cuentas.muertos),
+                'muertos · ${decimal(cuentas.mortalidad)} %',
+                color: ColoresGranja.granero,
+              ),
+              columna(miles(cuentas.vendidos), 'vendidos'),
+            ],
           ),
-          const SizedBox(height: e12),
+          const SizedBox(height: e16),
           BarraEtapa(dias: dias, conEtiquetas: true),
-          if (lote.etapaAlimento(DateTime.now()) == EtapaAlimento.cambio) ...[
+          if (cuentas.tocaCambiarAEngorde(DateTime.now())) ...[
             const SizedBox(height: e12),
-            const AvisoAtencion('Toca cambiar a alimento de engorde'),
+            Pulsable(
+              onTap: () => context.push('/lotes/${cuentas.lote.id}/alimento'),
+              child: const AvisoAtencion('Toca cambiar a alimento de engorde. Toca para anotar la compra.'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _Invertido extends StatelessWidget {
+  const _Invertido(this.cuentas);
+
+  final CuentasLote cuentas;
+
+  @override
+  Widget build(BuildContext context) {
+    final textos = Theme.of(context).textTheme;
+    final partes = [
+      ('Pollitos', cuentas.lote.precioCompraTotal, ColoresGranja.crema),
+      ('Alimento', cuentas.alimento, ColoresGranja.maiz),
+      ('Medicina', cuentas.medicina, ColoresGranja.lila),
+    ];
+    final total = cuentas.invertido;
+
+    return TarjetaTicket(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CifraTicket(etiqueta: 'Invertido hasta hoy', cifra: plata(total)),
+          if (total > 0) ...[
+            const SizedBox(height: e12),
+            SizedBox(
+              height: e8,
+              child: Row(
+                children: [
+                  for (final (_, valor, color) in partes)
+                    if (valor > 0)
+                      Expanded(
+                        // Ningún pedazo tan delgado que no se vea.
+                        flex: (valor * 1000 ~/ total).clamp(20, 1000),
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 3),
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: color,
+                              borderRadius: BorderRadius.circular(e4),
+                            ),
+                          ),
+                        ),
+                      ),
+                ],
+              ),
+            ),
+          ],
+          const SizedBox(height: e12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (final (nombre, valor, color) in partes)
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: e8,
+                            height: e8,
+                            decoration: BoxDecoration(
+                              color: color,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              nombre,
+                              style: textos.bodySmall!.copyWith(
+                                color: ColoresGranja.textoSobreTinta,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          plata(valor),
+                          style: conPeso(
+                            textos.bodyMedium!.copyWith(
+                              color: ColoresGranja.crema,
+                              fontFeatures: const [FontFeature.tabularFigures()],
+                            ),
+                            700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BotonesRegistrar extends StatelessWidget {
+  const _BotonesRegistrar({required this.loteId});
+
+  final String loteId;
+
+  @override
+  Widget build(BuildContext context) {
+    // shortcut: el botón de Venta llega en la parte 5.
+    final botones = [
+      (
+        'Alimento',
+        'Bultos',
+        const IconoModulo(Figura.bulto, tamano: 42),
+        '/lotes/$loteId/alimento',
+      ),
+      (
+        'Mortalidad',
+        'Pollos muertos',
+        const IconoModulo(
+          Figura.muerto,
+          fondo: ColoresGranja.graneroClaro,
+          color: ColoresGranja.granero,
+          tamano: 42,
+        ),
+        '/lotes/$loteId/muertos',
+      ),
+      (
+        'Medicina',
+        'Si enferman',
+        const IconoModulo(
+          Figura.capsula,
+          fondo: ColoresGranja.lilaClaro,
+          color: ColoresGranja.lilaOscuro,
+          tamano: 42,
+        ),
+        '/lotes/$loteId/medicina',
+      ),
+    ];
+    final textos = Theme.of(context).textTheme;
+    return LayoutBuilder(
+      builder: (context, medidas) => Wrap(
+        spacing: 10,
+        runSpacing: 10,
+        children: [
+          for (final (titulo, ayuda, icono, ruta) in botones)
+            SizedBox(
+              width: (medidas.maxWidth - 10) / 2,
+              child: Pulsable(
+                onTap: () => context.push(ruta),
+                child: Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: ColoresGranja.papel,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: ColoresGranja.borde),
+                  ),
+                  child: Row(
+                    children: [
+                      icono,
+                      const SizedBox(width: e12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(titulo, style: textos.titleMedium),
+                            Text(ayuda, style: textos.bodySmall),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Movimientos extends ConsumerWidget {
+  const _Movimientos({required this.granja, required this.loteId});
+
+  final Granja granja;
+  final String loteId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final registros = [
+      for (final registro in ref.watch(registrosProvider).asData?.value ?? const <Registro>[])
+        if (registro.loteId == loteId) registro,
+    ];
+    if (registros.isEmpty) return const SizedBox.shrink();
+    final miId = ref.watch(usuarioIdProvider);
+    // Sin señal no hay nombres, y basta con decir que lo anotó otra persona.
+    final nombres = {
+      for (final miembro in ref.watch(miembrosProvider(granja.id)).asData?.value ?? const <Miembro>[])
+        miembro.usuarioId: ?miembro.nombre,
+    };
+    String quien(Registro registro) => switch (registro.creadoPor) {
+          final id? when id == miId => 'registraste tú',
+          final id? when nombres[id] != null => 'registró ${nombres[id]}',
+          _ => 'registró otra persona',
+        };
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(e20, e24, e20, e12),
+          child: Text('Últimos movimientos', style: Theme.of(context).textTheme.titleLarge),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: e16),
+          child: _Lista(
+            filas: [
+              for (final registro in registros)
+                _FilaMovimiento(
+                  registro: registro,
+                  quien: quien(registro),
+                  alTocar: registro.puedeCambiarlo(
+                    administra: granja.rol.administra,
+                    usuarioId: miId,
+                  )
+                      ? () => context.push(_rutaParaCorregir(registro))
+                      : null,
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _rutaParaCorregir(Registro registro) => switch (registro) {
+        CompraAlimento() => '/lotes/$loteId/alimento/${registro.id}',
+        Mortalidad() => '/lotes/$loteId/muertos/${registro.id}',
+        Medicamento() => '/lotes/$loteId/medicina/${registro.id}',
+      };
+}
+
+class _FilaMovimiento extends StatelessWidget {
+  const _FilaMovimiento({
+    required this.registro,
+    required this.quien,
+    required this.alTocar,
+  });
+
+  final Registro registro;
+  final String quien;
+
+  /// Null si la persona no puede corregir este registro.
+  final VoidCallback? alTocar;
+
+  @override
+  Widget build(BuildContext context) {
+    final textos = Theme.of(context).textTheme;
+    final (icono, titulo, valor, colorValor) = switch (registro) {
+      CompraAlimento c => (
+          c.tipo == TipoAlimento.inicio
+              ? const IconoModulo(Figura.bulto, tamano: 40)
+              : const IconoModulo(
+                  Figura.bulto,
+                  fondo: ColoresGranja.granero,
+                  color: ColoresGranja.papel,
+                  tamano: 40,
+                ),
+          '${c.bultos} ${c.bultos == 1 ? 'bulto' : 'bultos'} de ${c.tipo.name} · ${c.marca}',
+          plata(c.total),
+          ColoresGranja.tinta,
+        ),
+      Mortalidad m => (
+          const IconoModulo(
+            Figura.muerto,
+            fondo: ColoresGranja.graneroClaro,
+            color: ColoresGranja.granero,
+            tamano: 40,
+          ),
+          [
+            '${m.cantidad} ${m.cantidad == 1 ? 'muerto' : 'muertos'}',
+            if (m.causa case final causa?) causa.etiqueta.toLowerCase(),
+          ].join(' · '),
+          '−${m.cantidad}',
+          ColoresGranja.granero,
+        ),
+      Medicamento m => (
+          const IconoModulo(
+            Figura.capsula,
+            fondo: ColoresGranja.lilaClaro,
+            color: ColoresGranja.lilaOscuro,
+            tamano: 40,
+          ),
+          m.nombre,
+          plata(m.costo),
+          ColoresGranja.tinta,
+        ),
+    };
+
+    return Pulsable(
+      onTap: alTocar,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: e16, vertical: 14),
+        child: Row(
+          children: [
+            icono,
+            const SizedBox(width: e12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(titulo, style: textos.titleMedium, maxLines: 2),
+                  Text('${fechaCorta(registro.fecha)} · $quien', style: textos.bodySmall),
+                ],
+              ),
+            ),
+            const SizedBox(width: e8),
+            Text(
+              valor,
+              style: conPeso(
+                textos.bodyLarge!.copyWith(
+                  color: colorValor,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+                700,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Tarjeta blanca con filas separadas por una línea fina.
+class _Lista extends StatelessWidget {
+  const _Lista({required this.filas});
+
+  final List<Widget> filas;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: ColoresGranja.papel,
+        borderRadius: BorderRadius.circular(radioTarjeta),
+        border: Border.all(color: ColoresGranja.borde),
+      ),
+      child: Column(
+        children: [
+          for (final (i, fila) in filas.indexed) ...[
+            if (i > 0)
+              const Divider(
+                height: 1,
+                indent: e16,
+                endIndent: e16,
+                color: ColoresGranja.borde,
+              ),
+            fila,
           ],
         ],
       ),
