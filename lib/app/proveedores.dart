@@ -11,6 +11,9 @@ import '../modulos/lotes/adaptadores/local/repositorio_lotes_local.dart';
 import '../modulos/lotes/aplicacion/crear_lote.dart';
 import '../modulos/lotes/dominio/lote.dart';
 import '../modulos/lotes/puertos/repositorio_lotes.dart';
+import '../modulos/registros/adaptadores/local/repositorio_registros_local.dart';
+import '../modulos/registros/dominio/cuentas_lote.dart';
+import '../modulos/registros/dominio/registro.dart';
 
 final supabaseProvider = Provider((ref) => Supabase.instance.client);
 
@@ -179,6 +182,13 @@ final repositorioLotesProvider = Provider<RepositorioLotes>(
   ),
 );
 
+final repositorioRegistrosProvider = Provider(
+  (ref) => RepositorioRegistrosLocal(
+    ref.watch(baseLocalProvider),
+    autor: ref.watch(usuarioIdProvider),
+  ),
+);
+
 final crearLoteProvider = Provider(
   (ref) => CrearLote(
     repositorio: ref.watch(repositorioLotesProvider),
@@ -190,8 +200,8 @@ final crearLoteProvider = Provider(
 /// Los ids nacen en el celular para poder registrar sin señal.
 String nuevoId() => const Uuid().v4();
 
-/// Un galpón con el lote que tiene adentro, si tiene.
-typedef GalponConLote = ({Galpon galpon, Lote? lote});
+/// Un galpón con el lote que tiene adentro, si tiene, y sus cuentas.
+typedef GalponConLote = ({Galpon galpon, Lote? lote, CuentasLote? cuentas});
 
 final lotesProvider = FutureProvider<List<Lote>>((ref) {
   ref.watch(cambiosLocalesProvider);
@@ -200,17 +210,27 @@ final lotesProvider = FutureProvider<List<Lote>>((ref) {
   return ref.watch(repositorioLotesProvider).listar(granja.id);
 });
 
+/// Todo lo anotado en la granja, lo más reciente primero.
+final registrosProvider = FutureProvider<List<Registro>>((ref) {
+  ref.watch(cambiosLocalesProvider);
+  final granja = ref.watch(granjaActualProvider);
+  if (granja == null) return const [];
+  return ref.watch(repositorioRegistrosProvider).listar(granja.id);
+});
+
 final galponesProvider = FutureProvider<List<GalponConLote>>((ref) async {
   ref.watch(cambiosLocalesProvider);
   final granja = ref.watch(granjaActualProvider);
   if (granja == null) return const [];
   final repositorio = ref.watch(repositorioGalponesProvider);
   final lotes = await ref.watch(lotesProvider.future);
+  final registros = await ref.watch(registrosProvider.future);
   return [
     for (final galpon in await repositorio.listar(granja.id))
-      (
-        galpon: galpon,
-        lote: lotes.where((l) => l.galponId == galpon.id && l.abierto).firstOrNull,
-      ),
+      if (lotes.where((l) => l.galponId == galpon.id && l.abierto).firstOrNull
+          case final lote?)
+        (galpon: galpon, lote: lote, cuentas: CuentasLote(lote, registros))
+      else
+        (galpon: galpon, lote: null, cuentas: null),
   ];
 });
