@@ -7,12 +7,10 @@ import '../puertos/repositorio_lotes.dart';
 
 class CrearLote {
   CrearLote({
-    required RepositorioLotes repositorio,
-    required String Function() generarId,
-    required DateTime Function() reloj,
-  })  : _repositorio = repositorio,
-        _generarId = generarId,
-        _reloj = reloj;
+    required this._repositorio,
+    required this._generarId,
+    required this._reloj,
+  });
 
   final RepositorioLotes _repositorio;
   final String Function() _generarId;

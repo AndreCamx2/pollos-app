@@ -108,8 +108,7 @@ class _ResumenGranja extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final abiertos = [
-      for (final galpon in galpones)
-        if (galpon.lote case final lote?) lote,
+      for (final galpon in galpones) ?galpon.lote,
     ];
     // shortcut: los muertos y las ventas llegan en la parte 4; hasta entonces
     // siguen vivos todos los que llegaron.
