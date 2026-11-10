@@ -67,3 +67,31 @@ class AvisoError extends StatelessWidget {
     );
   }
 }
+
+/// Algo que conviene saber pero no impide seguir.
+class AvisoAtencion extends StatelessWidget {
+  const AvisoAtencion(this.mensaje, {super.key});
+
+  final String mensaje;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: ColoresGranja.maizClaro,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        mensaje,
+        style: conPeso(
+          Theme.of(context)
+              .textTheme
+              .bodyMedium!
+              .copyWith(color: ColoresGranja.textoSobreMaiz),
+          600,
+        ),
+      ),
+    );
+  }
+}

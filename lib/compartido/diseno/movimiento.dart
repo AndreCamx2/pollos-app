@@ -7,3 +7,9 @@ abstract final class Curvas {
   /// Hojas que suben desde abajo, al estilo iOS.
   static const hoja = Cubic(0.32, 0.72, 0, 1);
 }
+
+const animacionDeHoja = AnimationStyle(
+  curve: Curvas.hoja,
+  duration: Duration(milliseconds: 280),
+  reverseDuration: Duration(milliseconds: 220),
+);

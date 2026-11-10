@@ -3,11 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../compartido/diseno/estado_error.dart';
+import '../modulos/galpones/adaptadores/ui/pantalla_formulario_galpon.dart';
+import '../modulos/galpones/adaptadores/ui/pantalla_galpon.dart';
+import '../modulos/galpones/adaptadores/ui/pantalla_galpones.dart';
 import '../modulos/granja/adaptadores/ui/pantalla_completar_cuenta.dart';
 import '../modulos/granja/adaptadores/ui/pantalla_entrar.dart';
 import '../modulos/granja/adaptadores/ui/pantalla_personas.dart';
 import '../modulos/granja/adaptadores/ui/pantalla_sin_granja.dart';
-import '../modulos/lotes/adaptadores/ui/pantalla_inicio.dart';
+import '../modulos/lotes/adaptadores/ui/pantalla_formulario_lote.dart';
 import 'proveedores.dart';
 
 const _deEntrada = {'/cargando', '/entrar', '/completar-cuenta', '/sin-granja'};
@@ -33,9 +36,34 @@ final rutasProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/sin-granja', builder: (_, _) => const PantallaSinGranja()),
       GoRoute(
         path: '/',
-        builder: (_, _) => const PantallaInicio(),
+        builder: (_, _) => const PantallaGalpones(),
         routes: [
           GoRoute(path: 'personas', builder: (_, _) => const PantallaPersonas()),
+          GoRoute(
+            path: 'galpones/nuevo',
+            builder: (_, _) => const PantallaFormularioGalpon(),
+          ),
+          GoRoute(
+            path: 'galpones/:id',
+            builder: (_, estado) =>
+                PantallaGalpon(galponId: estado.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: 'galpones/:id/editar',
+            builder: (_, estado) =>
+                PantallaFormularioGalpon(galponId: estado.pathParameters['id']),
+          ),
+          GoRoute(
+            path: 'lotes/nuevo',
+            builder: (_, estado) => PantallaFormularioLote(
+              galponId: estado.uri.queryParameters['galpon'],
+            ),
+          ),
+          GoRoute(
+            path: 'lotes/:id/editar',
+            builder: (_, estado) =>
+                PantallaFormularioLote(loteId: estado.pathParameters['id']),
+          ),
         ],
       ),
     ],
