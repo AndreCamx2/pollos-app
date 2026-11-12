@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pollos_app/modulos/clientes/dominio/cliente.dart';
 import 'package:pollos_app/modulos/lotes/dominio/lote.dart';
 import 'package:pollos_app/modulos/registros/dominio/cuentas_lote.dart';
 import 'package:pollos_app/modulos/registros/dominio/registro.dart';
@@ -146,6 +147,75 @@ void main() {
     });
   });
 
+  group('Ventas', () {
+    const jaime = Cliente.reconstruir(id: 'jaime', granjaId: 'granja-1', nombre: 'Don Jaime');
+
+    Venta venta({
+      int pollos = 10,
+      double libras = 50,
+      int precio = 5600,
+      bool fiado = false,
+      int vivos = 488,
+      int debe = 0,
+    }) =>
+        Venta.nueva(
+          id: 'v1',
+          lote: lote,
+          cliente: jaime,
+          fecha: DateTime(2026, 10, 10),
+          pollos: pollos,
+          libras: libras,
+          precioLibra: precio,
+          fiado: fiado,
+          vivosSinEsta: vivos,
+          debeSinEsta: debe,
+          hoy: hoy,
+        );
+
+    test('50 libras a \$5.600 son \$280.000', () {
+      expect(venta().total, 280000);
+    });
+
+    test('245,5 libras a \$5.600 son \$1.374.800, sin errores de decimales', () {
+      expect(venta(libras: 245.5).total, 1374800);
+      expect(totalVenta(0.29, 5600), 1624);
+    });
+
+    test('no deja vender más pollos de los vivos', () {
+      expect(
+        () => venta(pollos: 489),
+        throwsA(
+          isA<RegistroInvalido>().having(
+            (e) => e.mensaje,
+            'mensaje',
+            'Solo quedan 488 pollos vivos en este lote.',
+          ),
+        ),
+      );
+    });
+
+    test('rechaza una venta sin libras o sin precio', () {
+      expect(() => venta(libras: 0), throwsA(isA<RegistroInvalido>()));
+      expect(() => venta(precio: 0), throwsA(isA<RegistroInvalido>()));
+    });
+
+    test('una venta fiada suma a lo que debe el cliente y una de contado no', () {
+      expect(venta(fiado: true).fiadoPorCobrar, 280000);
+      expect(venta().fiadoPorCobrar, 0);
+    });
+
+    test('no deja pasar a contado una venta ya abonada', () {
+      expect(() => venta(debe: -200000), throwsA(isA<RegistroInvalido>()));
+      expect(venta(fiado: true, debe: -200000).fiado, isTrue);
+    });
+
+    test('avisa si las libras por pollo salen raras', () {
+      expect(venta().pesoRaro, isFalse);
+      expect(venta(libras: 15).pesoRaro, isTrue);
+      expect(venta(libras: 90).pesoRaro, isTrue);
+    });
+  });
+
   group('Quién puede cambiar un registro', () {
     final deBeto = Mortalidad.reconstruir(
       id: 'm1',
@@ -216,6 +286,27 @@ void main() {
         isFalse,
       );
       expect(CuentasLote(lote, const []).tocaCambiarAEngorde(DateTime(2026, 10, 1)), isFalse);
+    });
+
+    test('500 que llegaron, 12 muertos y 30 vendidos: quedan 458', () {
+      final cuentas = CuentasLote(lote, [
+        muertos(12),
+        Venta.reconstruir(
+          id: 'v1',
+          granjaId: 'granja-1',
+          loteId: 'lote-1',
+          fecha: DateTime(2026, 10, 9),
+          clienteId: 'jaime',
+          pollos: 30,
+          libras: 152,
+          precioLibra: 5600,
+          fiado: false,
+        ),
+      ]);
+      expect(cuentas.vendidos, 30);
+      expect(cuentas.vivos, 458);
+      expect(cuentas.ventas, 851200);
+      expect(cuentas.ganancia, 851200 - 1750000);
     });
 
     test('al corregir unos muertos no se cuentan dos veces', () {

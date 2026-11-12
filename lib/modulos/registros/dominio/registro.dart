@@ -2,6 +2,7 @@
 
 import '../../../compartido/fechas.dart';
 import '../../../compartido/formato.dart';
+import '../../clientes/dominio/cliente.dart';
 import '../../lotes/dominio/lote.dart';
 
 enum TipoAlimento {
@@ -35,8 +36,8 @@ class RegistroInvalido implements Exception {
   String toString() => 'RegistroInvalido: $mensaje';
 }
 
-/// Algo que se anotó en un lote: una compra de alimento, unos muertos o una
-/// medicina. Cada clase tiene un constructor `nueva` que revisa las reglas
+/// Algo que se anotó en un lote: una compra de alimento, unos muertos, una
+/// medicina o una venta. Cada clase tiene un constructor `nueva` que revisa las reglas
 /// (también sirve para corregir uno que ya existe, con su mismo id) y uno
 /// `reconstruir` para lo que ya estaba guardado.
 sealed class Registro {
@@ -245,4 +246,91 @@ final class Medicamento extends Registro {
 
   /// Para qué es o cómo se da.
   final String? nota;
+}
+
+/// Libras por precio, redondeado al peso como lo calcula la base de datos.
+/// Las libras se cuentan en centésimas para no arrastrar errores de decimales.
+int totalVenta(double libras, int precioLibra) =>
+    ((libras * 100).round() * precioLibra + 50) ~/ 100;
+
+final class Venta extends Registro {
+  Venta.reconstruir({
+    required super.id,
+    required super.granjaId,
+    required super.loteId,
+    required super.fecha,
+    required this.clienteId,
+    required this.pollos,
+    required this.libras,
+    required this.precioLibra,
+    required this.fiado,
+    super.creadoPor,
+    super.creadoEn,
+  });
+
+  /// [vivosSinEsta] son los vivos del lote sin contar esta venta y
+  /// [debeSinEsta] lo que debe el cliente sin contarla, para que al
+  /// corregirla no se cuente dos veces.
+  factory Venta.nueva({
+    required String id,
+    required Lote lote,
+    required Cliente cliente,
+    required DateTime fecha,
+    required int pollos,
+    required double libras,
+    required int precioLibra,
+    required bool fiado,
+    required int vivosSinEsta,
+    required int debeSinEsta,
+    required DateTime hoy,
+  }) {
+    _revisarLoteYFecha(lote, fecha, hoy);
+    if (pollos <= 0) {
+      throw const RegistroInvalido('Escribe cuántos pollos se vendieron.');
+    }
+    if (pollos > vivosSinEsta) {
+      throw RegistroInvalido('Solo quedan $vivosSinEsta pollos vivos en este lote.');
+    }
+    if (libras <= 0) {
+      throw const RegistroInvalido('Escribe cuántas libras pesaron.');
+    }
+    if (precioLibra <= 0) {
+      throw const RegistroInvalido('Escribe el precio de la libra.');
+    }
+    final venta = Venta.reconstruir(
+      id: id,
+      granjaId: lote.granjaId,
+      loteId: lote.id,
+      fecha: fecha,
+      clienteId: cliente.id,
+      pollos: pollos,
+      libras: (libras * 100).round() / 100,
+      precioLibra: precioLibra,
+      fiado: fiado,
+    );
+    try {
+      revisarQueNoQuedeAFavor(cliente, debeSinEsta + venta.fiadoPorCobrar);
+    } on ClienteInvalido catch (e) {
+      throw RegistroInvalido(e.mensaje);
+    }
+    return venta;
+  }
+
+  final String clienteId;
+  final int pollos;
+
+  /// Con dos decimales como mucho, como las guarda la base de datos.
+  final double libras;
+  final int precioLibra;
+  final bool fiado;
+
+  int get total => totalVenta(libras, precioLibra);
+
+  /// Lo que esta venta le suma a la deuda del cliente.
+  int get fiadoPorCobrar => fiado ? total : 0;
+
+  double get librasPorPollo => libras / pollos;
+
+  /// Menos de 2 o más de 8 libras por pollo casi siempre es un error al anotar.
+  bool get pesoRaro => librasPorPollo < 2 || librasPorPollo > 8;
 }

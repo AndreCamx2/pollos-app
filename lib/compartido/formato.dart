@@ -37,3 +37,13 @@ int? leerEntero(String texto) =>
 /// Lee metros o libras escritos con coma o con punto.
 double? leerDecimal(String texto) =>
     double.tryParse(texto.trim().replaceAll(',', '.'));
+
+/// "María José Peñaloza" -> "MP"; "Jo" -> "J".
+String iniciales(String nombre) {
+  final palabras = nombre.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty);
+  if (palabras.isEmpty) return '';
+  String primeraLetra(String palabra) => String.fromCharCode(palabra.runes.first);
+  final primera = primeraLetra(palabras.first);
+  final ultima = palabras.length > 1 ? primeraLetra(palabras.last) : '';
+  return (primera + ultima).toUpperCase();
+}

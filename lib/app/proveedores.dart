@@ -4,6 +4,8 @@ import 'package:uuid/uuid.dart';
 
 import '../compartido/errores.dart';
 import '../compartido/local/base_local.dart';
+import '../modulos/clientes/adaptadores/local/repositorio_clientes_local.dart';
+import '../modulos/clientes/dominio/cliente.dart';
 import '../modulos/galpones/adaptadores/local/repositorio_galpones_local.dart';
 import '../modulos/galpones/dominio/galpon.dart';
 import '../modulos/granja/dominio/granja.dart';
@@ -128,29 +130,43 @@ final granjaActualProvider = Provider<Granja?>((ref) {
   return granjas.firstWhere((g) => g.id == elegida, orElse: () => granjas.first);
 });
 
+/// Queda guardado en el celular para mostrar quién anotó o recibió algo
+/// aunque no haya señal.
 final miembrosProvider =
     FutureProvider.family<List<Miembro>, String>((ref, granjaId) async {
   final db = ref.watch(supabaseProvider);
-  final filas = await db
-      .from('miembros')
-      .select('usuario_id, rol')
-      .eq('granja_id', granjaId)
-      .order('unido_en');
-  // miembros y perfiles no tienen llave entre sí (las dos apuntan a
-  // auth.users), así que los nombres se piden aparte.
-  final perfiles = await db
-      .from('perfiles')
-      .select('id, nombre')
-      .inFilter('id', [for (final f in filas) f['usuario_id']]);
-  final nombres = {
-    for (final p in perfiles) p['id'] as String: p['nombre'] as String,
-  };
+  final miembros = await _oLoGuardado(
+    ref.watch(baseLocalProvider),
+    'miembros:$granjaId',
+    () async {
+      final filas = await db
+          .from('miembros')
+          .select('usuario_id, rol')
+          .eq('granja_id', granjaId)
+          .order('unido_en');
+      // miembros y perfiles no tienen llave entre sí (las dos apuntan a
+      // auth.users), así que los nombres se piden aparte.
+      final perfiles = await db
+          .from('perfiles')
+          .select('id, nombre')
+          .inFilter('id', [for (final f in filas) f['usuario_id']]);
+      final nombres = {for (final p in perfiles) p['id']: p['nombre']};
+      return [
+        for (final f in filas)
+          {
+            'usuario_id': f['usuario_id'],
+            'nombre': nombres[f['usuario_id']],
+            'rol': f['rol'],
+          },
+      ];
+    },
+  );
   return [
-    for (final f in filas)
+    for (final m in miembros! as List)
       (
-        usuarioId: f['usuario_id'] as String,
-        nombre: nombres[f['usuario_id']],
-        rol: Rol.values.byName(f['rol'] as String),
+        usuarioId: m['usuario_id'] as String,
+        nombre: m['nombre'] as String?,
+        rol: Rol.values.byName(m['rol'] as String),
       ),
   ];
 });
@@ -184,6 +200,13 @@ final repositorioLotesProvider = Provider<RepositorioLotes>(
 
 final repositorioRegistrosProvider = Provider(
   (ref) => RepositorioRegistrosLocal(
+    ref.watch(baseLocalProvider),
+    autor: ref.watch(usuarioIdProvider),
+  ),
+);
+
+final repositorioClientesProvider = Provider(
+  (ref) => RepositorioClientesLocal(
     ref.watch(baseLocalProvider),
     autor: ref.watch(usuarioIdProvider),
   ),
@@ -234,3 +257,42 @@ final galponesProvider = FutureProvider<List<GalponConLote>>((ref) async {
         (galpon: galpon, lote: null, cuentas: null),
   ];
 });
+
+/// Cada cliente con lo que debe, ordenados como se muestran: primero los
+/// recurrentes, los que más deben arriba.
+final cuentasClientesProvider = FutureProvider<List<CuentaCliente>>((ref) async {
+  ref.watch(cambiosLocalesProvider);
+  final granja = ref.watch(granjaActualProvider);
+  if (granja == null) return const [];
+  final repositorio = ref.watch(repositorioClientesProvider);
+  final abonos = await repositorio.abonos(granja.id);
+  final ventas = [
+    for (final registro in await ref.watch(registrosProvider.future))
+      if (registro is Venta) registro,
+  ];
+  return [
+    for (final cliente in await repositorio.clientes(granja.id))
+      _cuenta(cliente, ventas, abonos),
+  ]..sort(ordenDeClientes);
+});
+
+/// [ventas] vienen de la más reciente a la más antigua.
+CuentaCliente _cuenta(Cliente cliente, List<Venta> ventas, List<Abono> abonos) {
+  final suyas = [for (final v in ventas) if (v.clienteId == cliente.id) v];
+  return CuentaCliente(
+    cliente: cliente,
+    totalFiado: suyas.fold(0, (suma, venta) => suma + venta.fiadoPorCobrar),
+    abonos: [for (final a in abonos) if (a.clienteId == cliente.id) a],
+    ventas: suyas.length,
+    ultimoPrecio: suyas.firstOrNull?.precioLibra,
+  );
+}
+
+final cuentaClienteProvider = Provider.family<CuentaCliente?, String>(
+  (ref, clienteId) => ref
+      .watch(cuentasClientesProvider)
+      .asData
+      ?.value
+      .where((cuenta) => cuenta.cliente.id == clienteId)
+      .firstOrNull,
+);

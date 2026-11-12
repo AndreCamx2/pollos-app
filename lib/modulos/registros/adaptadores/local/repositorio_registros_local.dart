@@ -39,6 +39,14 @@ class RepositorioRegistrosLocal {
                 'costo': m.costo,
                 'nota': m.nota,
               },
+            Venta v => {
+                'cliente_id': v.clienteId,
+                'pollos': v.pollos,
+                'libras': v.libras,
+                'precio_libra': v.precioLibra,
+                'total': v.total,
+                'fiado': v.fiado ? 1 : 0,
+              },
           },
         },
         titulo: _titulo(registro),
@@ -96,6 +104,20 @@ class RepositorioRegistrosLocal {
           creadoPor: f['creado_por'] as String?,
           creadoEn: _fechaHora(f['creado_en']),
         ),
+      for (final f in await _local.filas('ventas', granjaId: granjaId))
+        Venta.reconstruir(
+          id: f['id']! as String,
+          granjaId: granjaId,
+          loteId: f['lote_id']! as String,
+          fecha: DateTime.parse(f['fecha']! as String),
+          clienteId: f['cliente_id']! as String,
+          pollos: f['pollos']! as int,
+          libras: (f['libras']! as num).toDouble(),
+          precioLibra: f['precio_libra']! as int,
+          fiado: f['fiado'] == 1,
+          creadoPor: f['creado_por'] as String?,
+          creadoEn: _fechaHora(f['creado_en']),
+        ),
     ];
     final nunca = DateTime.utc(2000);
     registros.sort((a, b) {
@@ -111,6 +133,7 @@ class RepositorioRegistrosLocal {
         CompraAlimento() => 'compras_alimento',
         Mortalidad() => 'mortalidad',
         Medicamento() => 'medicamentos',
+        Venta() => 'ventas',
       };
 
   String _titulo(Registro registro) {
@@ -121,6 +144,8 @@ class RepositorioRegistrosLocal {
       Mortalidad(:final cantidad) =>
         '$cantidad ${cantidad == 1 ? 'muerto' : 'muertos'} del $dia',
       Medicamento(:final nombre) => '$nombre del $dia',
+      Venta(:final pollos) =>
+        'Venta de $pollos ${pollos == 1 ? 'pollo' : 'pollos'} del $dia',
     };
   }
 
