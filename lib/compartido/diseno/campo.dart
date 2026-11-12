@@ -116,7 +116,7 @@ class MilesAlEscribir extends TextInputFormatter {
 }
 
 /// Para campos de cantidades enteras: solo números y como mucho siete cifras.
-const soloCantidad = <TextInputFormatter>[
+final soloCantidad = <TextInputFormatter>[
   FilteringTextInputFormatter.digitsOnly,
   LengthLimitingTextInputFormatter(7),
 ];
