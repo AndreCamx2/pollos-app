@@ -9,6 +9,12 @@ Flutter + Supabase. El código está organizado por módulos en `lib/modulos/`
 Qué trae cada versión está en `CHANGELOG.md` y la base de datos en
 `supabase/README.md`.
 
+Más documentación en `docs/`:
+
+- [Arquitectura](docs/arquitectura.md): módulos, capas y cómo trabaja sin señal.
+- [Diseño](docs/diseno.md): colores, letras, widgets de marca y el gallo.
+- [Publicar una versión](docs/publicar-una-version.md): de la rama al APK en el Release.
+
 ## Correr la app en desarrollo
 
 1. Copia `.env.example` como `.env.json` y pon la URL y la clave publicable
