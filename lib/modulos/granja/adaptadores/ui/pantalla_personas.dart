@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../app/proveedores.dart';
 import '../../../../compartido/diseno/colores.dart';
+import '../../../../compartido/diseno/encabezado_maiz.dart';
 import '../../../../compartido/diseno/estado_error.dart';
 import '../../../../compartido/diseno/hoja_confirmar.dart';
 import '../../../../compartido/diseno/movimiento.dart';
@@ -22,87 +23,117 @@ class PantallaPersonas extends ConsumerWidget {
     final granja = ref.watch(granjaActualProvider);
     if (granja == null) return const Scaffold();
     final miId = ref.watch(usuarioIdProvider);
-    final textos = Theme.of(context).textTheme;
+    final miembros = ref.watch(miembrosProvider(granja.id));
+    final cuantos = miembros.asData?.value.length;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Personas')),
-      body: ref.watch(miembrosProvider(granja.id)).when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, _) => EstadoError(
-              error: error,
-              alReintentar: () => ref.invalidate(miembrosProvider(granja.id)),
-            ),
-            data: (miembros) => ListView(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-              children: [
-                Text(granja.nombre.toUpperCase(), style: textos.labelLarge),
-                const SizedBox(height: 8),
-                Container(
-                  decoration: BoxDecoration(
-                    color: ColoresGranja.papel,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: ColoresGranja.borde),
-                  ),
-                  child: Column(
-                    children: [
-                      for (final (i, miembro) in miembros.indexed) ...[
-                        if (i > 0)
-                          const Divider(
-                            height: 1,
-                            indent: 16,
-                            endIndent: 16,
-                            color: ColoresGranja.borde,
-                          ),
-                        _FilaMiembro(
-                          miembro: miembro,
-                          soyYo: miembro.usuarioId == miId,
-                          alTocar: granja.rol == Rol.dueno && miembro.usuarioId != miId
-                              ? () => showModalBottomSheet<void>(
-                                    context: context,
-                                    isScrollControlled: true,
-                                    sheetAnimationStyle: animacionDeHoja,
-                                    builder: (_) =>
-                                        _HojaMiembro(granja: granja, miembro: miembro),
-                                  )
-                              : null,
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                if (granja.rol.administra) ...[
-                  const SizedBox(height: 24),
-                  BotonPrincipal(
-                    texto: 'Invitar a alguien',
-                    onPressed: () => showModalBottomSheet<void>(
-                      context: context,
-                      isScrollControlled: true,
-                      sheetAnimationStyle: const AnimationStyle(
-                        curve: Curvas.hoja,
-                        duration: Duration(milliseconds: 280),
-                        reverseDuration: Duration(milliseconds: 220),
-                      ),
-                      builder: (_) => _HojaInvitar(granjaId: granja.id),
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 32),
-                Center(
-                  child: TextButton(
-                    onPressed: () => _salir(context, ref, granja),
-                    style: TextButton.styleFrom(foregroundColor: ColoresGranja.granero),
-                    child: const Text('Salir de esta granja'),
-                  ),
-                ),
-                Center(
-                  child: TextButton(
-                    onPressed: () => ref.read(supabaseProvider).auth.signOut(),
-                    child: const Text('Cerrar sesión'),
-                  ),
-                ),
-              ],
+      body: ListView(
+        padding: const EdgeInsets.only(bottom: 24),
+        children: [
+          EncabezadoMaiz(
+            child: TitularPantalla(
+              titulo: 'Personas',
+              subtitulo: cuantos == null
+                  ? granja.nombre
+                  : '${granja.nombre} · $cuantos ${cuantos == 1 ? 'persona' : 'personas'}',
             ),
           ),
+          ...miembros.when<List<Widget>>(
+            loading: () => const [
+              Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            ],
+            error: (error, _) => [
+              EstadoError(
+                error: error,
+                alReintentar: () => ref.invalidate(miembrosProvider(granja.id)),
+              ),
+            ],
+            data: (miembros) => [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        color: ColoresGranja.papel,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: ColoresGranja.borde),
+                      ),
+                      child: Column(
+                        children: [
+                          for (final (i, miembro) in miembros.indexed) ...[
+                            if (i > 0)
+                              const Divider(
+                                height: 1,
+                                indent: 16,
+                                endIndent: 16,
+                                color: ColoresGranja.borde,
+                              ),
+                            _FilaMiembro(
+                              miembro: miembro,
+                              soyYo: miembro.usuarioId == miId,
+                              alTocar: granja.rol == Rol.dueno && miembro.usuarioId != miId
+                                  ? () => showModalBottomSheet<void>(
+                                        context: context,
+                                        isScrollControlled: true,
+                                        sheetAnimationStyle: animacionDeHoja,
+                                        builder: (_) =>
+                                            _HojaMiembro(granja: granja, miembro: miembro),
+                                      )
+                                  : null,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    if (granja.rol == Rol.dueno && miembros.length > 1) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        'Toca a una persona para cambiarle el rol o sacarla de la granja.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                    if (granja.rol.administra) ...[
+                      const SizedBox(height: 24),
+                      BotonPrincipal(
+                        texto: 'Invitar a alguien',
+                        onPressed: () => showModalBottomSheet<void>(
+                          context: context,
+                          isScrollControlled: true,
+                          sheetAnimationStyle: const AnimationStyle(
+                            curve: Curvas.hoja,
+                            duration: Duration(milliseconds: 280),
+                            reverseDuration: Duration(milliseconds: 220),
+                          ),
+                          builder: (_) => _HojaInvitar(granjaId: granja.id),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 32),
+                    Center(
+                      child: TextButton(
+                        onPressed: () => _salir(context, ref, granja),
+                        style: TextButton.styleFrom(foregroundColor: ColoresGranja.granero),
+                        child: const Text('Salir de esta granja'),
+                      ),
+                    ),
+                    Center(
+                      child: TextButton(
+                        onPressed: () => ref.read(supabaseProvider).auth.signOut(),
+                        child: const Text('Cerrar sesión'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
