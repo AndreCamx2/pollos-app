@@ -10,6 +10,18 @@ código, se corrigen aquí en la misma rama.
 5. [Pantallas](#5-pantallas)
 6. [Vida de un lote](#6-vida-de-un-lote)
 7. [De un cambio al celular](#7-de-un-cambio-al-celular)
+8. [Quién puede hacer qué](#8-quién-puede-hacer-qué)
+9. [Cuentas, granjas e invitaciones](#9-cuentas-granjas-e-invitaciones)
+10. [Clases del dominio](#10-clases-del-dominio)
+11. [Las cuentas del lote](#11-las-cuentas-del-lote)
+12. [Fiado y abonos](#12-fiado-y-abonos)
+13. [Guardar algo, paso a paso](#13-guardar-algo-paso-a-paso)
+14. [Estados de un cambio pendiente](#14-estados-de-un-cambio-pendiente)
+15. [La base del celular](#15-la-base-del-celular)
+16. [Cómo se conectan los proveedores](#16-cómo-se-conectan-los-proveedores)
+17. [Infraestructura](#17-infraestructura)
+18. [El respaldo](#18-el-respaldo)
+19. [Cómo se protege cada dato](#19-cómo-se-protege-cada-dato)
 
 ## 1. Módulos y capas
 
@@ -314,4 +326,469 @@ flowchart LR
   apk --> release["Release en GitHub<br/>Mis-Pollos-X.Y.Z.apk"]
   release --> cel["Celulares<br/>se instala encima"]
   respaldo{{"Respaldo de Supabase<br/>cada 3 días"}} -.-> supa
+```
+
+## 8. Quién puede hacer qué
+
+Lo hacen cumplir las reglas por fila de Supabase. La app además esconde los
+botones que un rol no puede usar.
+
+```mermaid
+flowchart LR
+  D(["Dueño"])
+  A(["Administrador"])
+  T(["Trabajador"])
+
+  subgraph todos["Todos"]
+    reg["Anotar alimento, muertos,<br/>medicina y ventas"]
+    cli["Crear clientes y abonos"]
+    suyo["Editar o borrar lo que anotó él"]
+    salir["Salirse de la granja"]
+  end
+  subgraph admin["Dueño y administrador"]
+    gal["Galpones y lotes"]
+    cerrar["Cerrar lotes"]
+    inv["Invitar con un código"]
+    otro["Editar cualquier registro"]
+  end
+  subgraph dueno["Solo el dueño"]
+    rol["Cambiar el rol de alguien"]
+    sacar["Sacar a alguien"]
+    borrar["Borrar la granja"]
+  end
+
+  T --> todos
+  A --> todos
+  A --> admin
+  D --> todos
+  D --> admin
+  D --> dueno
+```
+
+## 9. Cuentas, granjas e invitaciones
+
+Los registros públicos están cerrados: cada cuenta la crea el dueño en Supabase.
+
+```mermaid
+sequenceDiagram
+  autonumber
+  actor Du as Dueño
+  participant SB as Supabase (panel)
+  actor Pe as Persona nueva
+  participant App as App
+  participant DB as Supabase (base)
+
+  Du->>SB: Authentication → Add user<br/>(correo, contraseña temporal, Auto Confirm)
+  Du-->>Pe: Correo y contraseña por un canal privado
+  Pe->>App: Entra
+  App->>DB: signInWithPassword
+  App->>DB: ¿Tiene nombre? (perfiles)
+  DB-->>App: No
+  Pe->>App: Nombre y contraseña nueva
+  App->>DB: upsert perfiles, updateUser(password)
+
+  alt Es dueño de una granja nueva
+    Pe->>App: Crear mi granja
+    App->>DB: crear_granja(nombre)
+    DB-->>App: id de la granja (queda como dueño)
+  else Va a trabajar en una granja que ya existe
+    Du->>App: Personas → Invitar (trabajador o administrador)
+    App->>DB: crear_invitacion(granja, rol)
+    DB-->>App: código de 8 letras (una vez, 7 días)
+    Du-->>Pe: El código
+    Pe->>App: Unirme con un código
+    App->>DB: unirse_con_codigo(código)
+    DB-->>App: id de la granja
+  end
+  App->>App: Recuerda la granja y abre Galpones
+```
+
+## 10. Clases del dominio
+
+Todo en Dart puro. Cada clase tiene dos formas de crearse: `.nueva()` revisa
+las reglas y lanza su excepción con el `campo` del error; `.reconstruir()`
+arma el objeto con lo que ya está guardado, sin revisar.
+
+```mermaid
+classDiagram
+  direction LR
+  class Rol {
+    <<enum>>
+    dueno
+    administrador
+    trabajador
+    administra bool
+  }
+  class Galpon {
+    id
+    nombre
+    capacidad
+    nuevo()
+  }
+  class Lote {
+    id
+    galponId
+    fechaLlegada
+    cantidadInicial
+    precioCompraTotal
+    cerradoEn
+    diasDeEdad(hoy)
+    fechaCambioAEngorde
+    nuevo()
+  }
+  class Registro {
+    <<sealed>>
+    id
+    loteId
+    fecha
+    creadoPor
+  }
+  class CompraAlimento {
+    tipo
+    marca, marcaId
+    bultos
+    kilosPorBulto
+    precioPorBulto
+    total
+    kilos
+  }
+  class Mortalidad {
+    cantidad
+    causa
+    nota
+  }
+  class Medicamento {
+    nombre
+    costo
+  }
+  class Venta {
+    clienteId
+    pollos
+    libras
+    precioLibra
+    fiado
+    total
+    librasPorPollo
+  }
+  class Marca {
+    nombre
+    kilosPorBulto
+    enUso
+  }
+  class Cliente {
+    nombre
+    detalle
+    telefono
+    recurrente
+  }
+  class Abono {
+    clienteId
+    fecha
+    valor
+  }
+  class CuentaCliente {
+    totalFiado
+    abonado
+    debe
+    alDia
+  }
+  class CuentasLote {
+    vivos
+    muertos
+    faltantes
+    vendidos
+    invertido
+    ventas
+    ganancia
+    margen
+    conversion
+    vivosSin(registro)
+  }
+
+  Registro <|-- CompraAlimento
+  Registro <|-- Mortalidad
+  Registro <|-- Medicamento
+  Registro <|-- Venta
+  Galpon "1" --> "0..1" Lote : lote abierto
+  Lote "1" --> "*" Registro
+  CompraAlimento --> Marca
+  Venta --> Cliente
+  Abono --> Cliente
+  CuentaCliente --> Cliente
+  CuentasLote --> Lote
+  CuentasLote ..> Registro : suma
+```
+
+## 11. Las cuentas del lote
+
+`CuentasLote(lote, registros)` recorre los registros del lote una vez y saca
+todo lo que muestran el galpón y el cierre.
+
+```mermaid
+flowchart LR
+  L["Lote<br/>pollitos y su precio"]
+  M["Mortalidad<br/>(faltantes aparte)"]
+  V["Ventas"]
+  CA["Compras de alimento"]
+  ME["Medicina"]
+
+  vivos["Vivos =<br/>llegaron − muertos<br/>− faltantes − vendidos"]
+  mort["Mortalidad % =<br/>muertos ÷ llegaron"]
+  ventas["Ventas = Σ total"]
+  otros["Peso y precio promedio,<br/>ventas por cliente"]
+  conv["Conversión =<br/>kg alimento ÷ kg pollo<br/>(normal ≈ 1,9)"]
+  inv["Invertido =<br/>pollitos + alimento<br/>+ medicina"]
+  etapa["Aviso de engorde<br/>desde el día 22"]
+
+  gan["Ganancia =<br/>ventas − invertido"]
+  margen["Margen =<br/>ganancia ÷ ventas"]
+  porPollo["Costo y ganancia<br/>por pollo"]
+
+  L --> vivos
+  M --> vivos
+  V --> vivos
+  M --> mort
+  V --> ventas
+  V --> otros
+  V --> conv
+  CA --> conv
+  CA --> inv
+  L --> inv
+  ME --> inv
+  CA --> etapa
+  ventas --> gan
+  inv --> gan
+  gan --> margen
+  gan --> porPollo
+```
+
+## 12. Fiado y abonos
+
+```mermaid
+flowchart TD
+  venta["Venta"] --> f{¿Fiada?}
+  f -- No, de contado --> fin["No cambia lo que debe"]
+  f -- Sí --> debe["Debe = Σ fiado − Σ abonos"]
+  abono["Abono"] --> r1{¿Más de lo que debe?}
+  r1 -- Sí --> no1["No se guarda:<br/>quedaría a favor"]
+  r1 -- No --> r2{¿Antes de su primera<br/>venta fiada?}
+  r2 -- Sí --> no2["No se guarda"]
+  r2 -- No --> debe
+  cambio["Pasar una venta<br/>fiada a contado"] --> r3{¿Ya tiene abonos<br/>que la cubren?}
+  r3 -- Sí --> no3["No se deja:<br/>los abonos quedarían a favor"]
+  r3 -- No --> debe
+  debe --> lista["Clientes: Te deben / Al día"]
+
+  subgraph base["En Supabase"]
+    trig["Trigger validar_saldo_cliente<br/>en ventas y abonos"]
+    vista["Vista saldo_clientes"]
+  end
+  debe -. lo hace cumplir .-> trig
+```
+
+## 13. Guardar algo, paso a paso
+
+Así funciona cualquier formulario. El ejemplo es anotar muertos
+(`pantalla_muertos.dart`).
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant UI as PantallaMuertos
+  participant Dom as Mortalidad.nueva()
+  participant Rep as RepositorioRegistrosLocal
+  participant BL as BaseLocal
+  participant Sin as Sincronizacion
+  participant Prov as Proveedores
+
+  UI->>Dom: lote, fecha, cantidad, causa,<br/>vivosSinEste = cuentas.vivosSin(original)
+  alt Rompe una regla
+    Dom-->>UI: RegistroInvalido(mensaje, campo)
+    UI->>UI: mostrarError(mensaje, campo)<br/>en rojo debajo del campo
+  else Todo bien
+    Dom-->>UI: Mortalidad
+    UI->>Rep: guardar(registro)
+    Rep->>BL: guardarFila('mortalidad', fila)
+    BL->>BL: En una transacción:<br/>escribe la fila y la pone en pendientes
+    UI->>Sin: huboCambios()
+    Sin->>Prov: cambiosLocales.avisar()
+    Prov->>Prov: lotes, registros y galpones<br/>se vuelven a leer
+    Sin->>Sin: sincronizar() sin esperar
+    UI->>UI: context.pop()
+  end
+```
+
+## 14. Estados de un cambio pendiente
+
+```mermaid
+stateDiagram-v2
+  [*] --> EnCola: Se guarda o borra algo
+  EnCola: En cola
+  note right of EnCola
+    Si se corrige lo último que se hizo,
+    se actualiza la misma entrada.
+    Sin señal o con la sesión vencida,
+    se queda y se reintenta.
+  end note
+  EnCola --> Subido: Supabase lo acepta
+  Subido --> [*]: Se quita de la cola
+  EnCola --> Rechazado: Supabase lo rechaza<br/>(se guarda el motivo)
+  Rechazado --> EnCola: La persona lo corrige<br/>o toca Reintentar
+  Rechazado --> Descartado: La persona lo descarta
+  Descartado --> [*]: El celular vuelve a<br/>lo que tiene el servidor
+```
+
+## 15. La base del celular
+
+`BaseLocal` (sqflite, versión 4). Las tablas del negocio son copias de las de
+Supabase con las columnas de `columnasLocales`. Los booleanos se guardan como
+1 y 0 (`columnasSiNo`).
+
+```mermaid
+erDiagram
+  galpones ||--o{ lotes : ""
+  lotes ||--o{ compras_alimento : ""
+  lotes ||--o{ mortalidad : ""
+  lotes ||--o{ medicamentos : ""
+  lotes ||--o{ ventas : ""
+  clientes ||--o{ ventas : ""
+  clientes ||--o{ abonos : ""
+  marcas ||--o{ compras_alimento : ""
+
+  pendientes {
+    int orden PK "el orden en que se hizo"
+    text granja_id
+    text tabla
+    text fila_id
+    text operacion "guardar o borrar"
+    text datos "la fila en JSON"
+    text titulo "lo que ve la persona"
+    int cambio "veces que se corrigió"
+    text error "motivo si se rechazó"
+  }
+  datos_guardados {
+    text clave PK
+    text valor
+  }
+```
+
+`datos_guardados` guarda lo último que se bajó de la cuenta (`nombre:<usuario>`,
+`granjas:<usuario>`, `miembros:<granja>`), la granja elegida
+(`granja:<usuario>`) y hasta cuándo se bajó cada tabla
+(`bajado:<granja>:<tabla>`). Así la app abre sin señal.
+
+## 16. Cómo se conectan los proveedores
+
+Riverpod en `lib/app/proveedores.dart`. Cuando algo de arriba cambia, todo lo
+que depende de él se vuelve a calcular.
+
+```mermaid
+flowchart TD
+  supa["supabaseProvider"] --> sesion["sesionProvider"]
+  sesion --> usuario["usuarioIdProvider"]
+  usuario --> nombre["miNombreProvider"]
+  usuario --> granjas["misGranjasProvider"]
+  usuario --> elegida["granjaElegidaProvider<br/>(guardada en el celular)"]
+  granjas --> actual["granjaActualProvider"]
+  elegida --> actual
+
+  base["baseLocalProvider"] --> repos["repositorio…Provider<br/>(galpones, lotes, registros, clientes)"]
+  usuario --> repos
+  cambios["cambiosLocalesProvider<br/>sube con cada cambio"]
+
+  actual --> lotes["lotesProvider"]
+  actual --> registros["registrosProvider"]
+  repos --> lotes
+  repos --> registros
+  cambios --> lotes
+  cambios --> registros
+  lotes --> galpones["galponesProvider<br/>(galpón + lote + CuentasLote)"]
+  registros --> galpones
+  registros --> cuentasLote["cuentasDeLoteProvider<br/>lotesCerradosProvider"]
+  actual --> clientes["cuentasClientesProvider<br/>marcasProvider"]
+  cambios --> clientes
+  actual --> sinc["sincronizacionProvider"]
+
+  sesion --> rutas["rutasProvider"]
+  nombre --> rutas
+  granjas --> rutas
+```
+
+## 17. Infraestructura
+
+```mermaid
+flowchart LR
+  subgraph pc["PC de Andrés"]
+    code["pollos_app"]
+    envs[".env.json<br/>.env.produccion.json"]
+    llave["claves/pollos-firma.jks<br/>+ android/key.properties"]
+  end
+
+  subgraph gh["GitHub: AndreCamx2/pollos-app"]
+    repo["main y ramas"]
+    ci{{"Base de datos<br/>en cada push y PR"}}
+    resp{{"Respaldo de Supabase<br/>cada 3 días"}}
+    rel["Releases<br/>Mis-Pollos-X.Y.Z.apk"]
+    sec["Secretos<br/>SUPABASE_DB_URL, CLAVE_RESPALDO"]
+  end
+
+  subgraph supabase["Supabase"]
+    dev[("pollos-dev<br/>pruebas")]
+    prod[("pollos-app<br/>datos reales, São Paulo")]
+  end
+
+  cel["Celulares<br/>Mis pollos"]
+
+  code -- git push --> repo
+  repo --> ci
+  repo -- merge a main:<br/>migraciones --> prod
+  code -. migración a mano .-> dev
+  code -- flutter run --> cel
+  cel -- .env.json --> dev
+  llave -- firma --> rel
+  rel -- APK --> cel
+  cel -- .env.produccion.json --> prod
+  sec --> resp
+  resp -- Session pooler --> prod
+  resp --> art["Artifact cifrado<br/>90 días"]
+```
+
+## 18. El respaldo
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant R as Reloj de GitHub<br/>(o Run workflow)
+  participant A as GitHub Actions
+  participant DB as pollos-app
+  participant G as Artifacts
+
+  R->>A: Cada 3 días a las 13:17 UTC
+  A->>A: Instala la CLI de Supabase
+  A->>DB: supabase db dump (roles, esquema, datos)<br/>por el Session pooler
+  DB-->>A: roles.sql, esquema.sql, datos.sql
+  A->>A: tar + gpg AES256 con CLAVE_RESPALDO
+  A->>A: Borra los .sql sin cifrar
+  A->>G: respaldo-pollos-AAAA-MM-DD.tar.gz.gpg<br/>(se guarda 90 días)
+  Note over DB: De paso, la consulta evita que<br/>Supabase pause el proyecto gratis
+```
+
+## 19. Cómo se protege cada dato
+
+```mermaid
+flowchart TD
+  pet["Petición desde un celular<br/>(con la clave publicable)"] --> auth{¿Inició sesión?}
+  auth -- No --> fuera["No ve nada"]
+  auth -- Sí --> rls{"RLS: ¿la fila es de<br/>una de mis_granjas()?"}
+  rls -- No --> fuera
+  rls -- Sí --> perm{"¿Su rol puede<br/>hacer esto?"}
+  perm -- No --> fuera2["Rechazado:<br/>Tu rol no tiene permiso"]
+  perm -- Sí --> trig{"Triggers del negocio"}
+  trig --> t1["validar_salida_de_pollos"]
+  trig --> t2["validar_saldo_cliente"]
+  trig --> t3["validar_registro_de_lote<br/>validar_fecha_no_futura"]
+  trig --> t4["validar_cantidad_inicial<br/>conservar_un_dueno"]
+  t1 & t2 & t3 & t4 --> ok{¿Cumple?}
+  ok -- No --> msg["Rechazado con la frase<br/>para la persona (P0001)"]
+  ok -- Sí --> guarda["Se guarda<br/>sellar_autor pone quién fue<br/>cambiado_en anota cuándo"]
 ```

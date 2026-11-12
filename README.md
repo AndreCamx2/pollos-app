@@ -14,7 +14,7 @@ Más documentación en `docs/`:
 - [Arquitectura](docs/arquitectura.md): módulos, capas y cómo trabaja sin señal.
 - [Diseño](docs/diseno.md): colores, letras, widgets de marca y el gallo.
 - [Publicar una versión](docs/publicar-una-version.md): de la rama al APK en el Release.
-- [Diagramas](docs/diagramas.md): módulos, sincronización sin señal, modelo de datos, pantallas, vida de un lote y publicación.
+- [Diagramas](docs/diagramas.md): 19 diagramas de la app: módulos, sincronización, modelo de datos, pantallas, roles, cuentas del lote, fiado, base del celular, proveedores, infraestructura, respaldo y seguridad.
 
 ## Correr la app en desarrollo
 
