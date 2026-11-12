@@ -150,6 +150,11 @@ String? _destino(Ref ref, String ruta) {
   final nombre = ref.read(miNombreProvider);
   final granjas = ref.read(misGranjasProvider);
   if (!nombre.hasValue || !granjas.hasValue) return ir('/cargando');
+  // Al entrar se vuelven a pedir para la cuenta nueva, y mientras llegan
+  // todavía tienen lo de antes de entrar: sin nombre y sin granjas.
+  if ((nombre.isLoading || granjas.isLoading) && _deEntrada.contains(ruta)) {
+    return ir('/cargando');
+  }
   if (nombre.requireValue == null) return ir('/completar-cuenta');
   if (granjas.requireValue.isEmpty) return ir('/sin-granja');
 
