@@ -24,13 +24,22 @@ se prueban con `supabase/tests/reglas_del_negocio.sql`.
 Se hace una sola vez. Los datos reales van en un proyecto aparte de
 `pollos-dev`, para poder probar sin dañar nada.
 
+`pollos-dev` no va conectado a GitHub: ahí se pega a mano cada migración nueva
+para probarla antes de fusionar.
+
 ### 1. El proyecto de Supabase
 
 1. En Supabase crea el proyecto `pollos-app`. Como región elige
    *South America (São Paulo)*, la más cercana a Colombia. Guarda la contraseña
    de la base de datos en un lugar seguro.
-2. *SQL Editor* → *New query*: pega y corre cada archivo de
-   `supabase/migrations/`, uno por uno, en el orden de la fecha del nombre.
+2. Antes de correr cualquier migración, conecta el proyecto con GitHub:
+   *Project Settings* → *Integrations* → *GitHub* → elige `AndreCamx2/pollos-app`,
+   *Working directory* `.`, *Deploy to production* encendido y *Automatic
+   branching* apagado (las ramas de vista previa se cobran). Desde ahí, cada
+   merge a `main` aplica solo las migraciones nuevas de `supabase/migrations/`.
+   Supabase anota cuáles ya aplicó; por eso no se pegan a mano en este
+   proyecto, porque las que entran por el SQL Editor no quedan anotadas y la
+   integración las intentaría correr otra vez.
 3. *Authentication* → *Sign In / Providers*: deja *Email* y *Confirm email*
    activos y apaga *Allow new users to sign up*.
 4. Crea las cuentas de la familia como dice `supabase/README.md` (*Add user*
