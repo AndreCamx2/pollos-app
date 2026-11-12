@@ -15,6 +15,7 @@ import '../../../../compartido/diseno/pulsable.dart';
 import '../../../../compartido/diseno/tarjeta_ticket.dart';
 import '../../../../compartido/diseno/tema.dart';
 import '../../../../compartido/formato.dart';
+import '../../../clientes/dominio/cliente.dart';
 import '../../../granja/dominio/granja.dart';
 import '../../../lotes/dominio/lote.dart';
 import '../../../registros/dominio/cuentas_lote.dart';
@@ -323,6 +324,22 @@ class _Invertido extends StatelessWidget {
                 ),
             ],
           ),
+          if (cuentas.ventas > 0) ...[
+            const SizedBox(height: e12),
+            const Divider(height: 1, color: ColoresGranja.textoSobreTinta),
+            const SizedBox(height: e12),
+            Text(
+              'Vendido hasta hoy: ${plata(cuentas.ventas)} · '
+              '${miles(cuentas.vendidos)} pollos, ${decimal(cuentas.librasVendidas)} lb',
+              style: conPeso(textos.bodyMedium!.copyWith(color: ColoresGranja.crema), 700),
+            ),
+            Text(
+              cuentas.ganancia >= 0
+                  ? 'Ya recuperaste lo invertido y vas ganando ${plata(cuentas.ganancia)}.'
+                  : 'Faltan ${plata(-cuentas.ganancia)} para recuperar lo invertido.',
+              style: textos.bodySmall!.copyWith(color: ColoresGranja.textoSobreTinta),
+            ),
+          ],
         ],
       ),
     );
@@ -336,13 +353,23 @@ class _BotonesRegistrar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // shortcut: el botón de Venta llega en la parte 5.
     final botones = [
       (
         'Alimento',
         'Bultos',
         const IconoModulo(Figura.bulto, tamano: 42),
         '/lotes/$loteId/alimento',
+      ),
+      (
+        'Venta',
+        'Por libras',
+        const IconoModulo(
+          Figura.balanza,
+          fondo: ColoresGranja.pastoClaro,
+          color: ColoresGranja.pasto,
+          tamano: 42,
+        ),
+        '/lotes/$loteId/venta',
       ),
       (
         'Mortalidad',
@@ -428,6 +455,11 @@ class _Movimientos extends ConsumerWidget {
       for (final miembro in ref.watch(miembrosProvider(granja.id)).asData?.value ?? const <Miembro>[])
         miembro.usuarioId: ?miembro.nombre,
     };
+    final clientes = {
+      for (final cuenta in ref.watch(cuentasClientesProvider).asData?.value ?? const <CuentaCliente>[])
+        cuenta.cliente.id: cuenta.cliente.nombre,
+    };
+    final nombreDeMarca = ref.watch(nombreDeMarcaProvider);
     String quien(Registro registro) => switch (registro.creadoPor) {
           final id? when id == miId => 'registraste tú',
           final id? when nombres[id] != null => 'registró ${nombres[id]}',
@@ -449,6 +481,8 @@ class _Movimientos extends ConsumerWidget {
                 _FilaMovimiento(
                   registro: registro,
                   quien: quien(registro),
+                  cliente: registro is Venta ? clientes[registro.clienteId] : null,
+                  marca: registro is CompraAlimento ? nombreDeMarca(registro) : null,
                   alTocar: registro.puedeCambiarlo(
                     administra: granja.rol.administra,
                     usuarioId: miId,
@@ -467,6 +501,7 @@ class _Movimientos extends ConsumerWidget {
         CompraAlimento() => '/lotes/$loteId/alimento/${registro.id}',
         Mortalidad() => '/lotes/$loteId/muertos/${registro.id}',
         Medicamento() => '/lotes/$loteId/medicina/${registro.id}',
+        Venta() => '/lotes/$loteId/venta/${registro.id}',
       };
 }
 
@@ -475,10 +510,18 @@ class _FilaMovimiento extends StatelessWidget {
     required this.registro,
     required this.quien,
     required this.alTocar,
+    this.cliente,
+    this.marca,
   });
 
   final Registro registro;
   final String quien;
+
+  /// A quién se le vendió, si es una venta.
+  final String? cliente;
+
+  /// El nombre de la marca como está en la lista, si es una compra.
+  final String? marca;
 
   /// Null si la persona no puede corregir este registro.
   final VoidCallback? alTocar;
@@ -496,7 +539,7 @@ class _FilaMovimiento extends StatelessWidget {
                   color: ColoresGranja.papel,
                   tamano: 40,
                 ),
-          '${c.bultos} ${c.bultos == 1 ? 'bulto' : 'bultos'} de ${c.tipo.name} · ${c.marca}',
+          '${c.bultos} ${c.bultos == 1 ? 'bulto' : 'bultos'} de ${c.tipo.name} · ${marca ?? c.marca}',
           plata(c.total),
           ColoresGranja.tinta,
         ),
@@ -524,6 +567,21 @@ class _FilaMovimiento extends StatelessWidget {
           m.nombre,
           plata(m.costo),
           ColoresGranja.tinta,
+        ),
+      Venta v => (
+          const IconoModulo(
+            Figura.balanza,
+            fondo: ColoresGranja.pastoClaro,
+            color: ColoresGranja.pasto,
+            tamano: 40,
+          ),
+          [
+            '${v.pollos} ${v.pollos == 1 ? 'pollo' : 'pollos'}',
+            ?cliente,
+            if (v.fiado) 'fiado',
+          ].join(' · '),
+          plata(v.total),
+          ColoresGranja.pasto,
         ),
     };
 

@@ -15,6 +15,7 @@ import '../../../../compartido/diseno/pulsable.dart';
 import '../../../../compartido/diseno/tarjeta_ticket.dart';
 import '../../../../compartido/diseno/tema.dart';
 import '../../../../compartido/formato.dart';
+import '../../../clientes/dominio/cliente.dart';
 import '../../../granja/adaptadores/ui/selector_granja.dart';
 import '../../../lotes/dominio/lote.dart';
 
@@ -100,18 +101,22 @@ class PantallaGalpones extends ConsumerWidget {
   }
 }
 
-class _ResumenGranja extends StatelessWidget {
+class _ResumenGranja extends ConsumerWidget {
   const _ResumenGranja({required this.galpones});
 
   final List<GalponConLote> galpones;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final abiertos = [
       for (final galpon in galpones) ?galpon.cuentas,
     ];
     final vivos = abiertos.fold(0, (suma, cuentas) => suma + cuentas.vivos);
-    final libres = galpones.length - abiertos.length;
+    final deudores = [
+      for (final cuenta in ref.watch(cuentasClientesProvider).asData?.value ?? const <CuentaCliente>[])
+        if (!cuenta.alDia) cuenta,
+    ];
+    final teDeben = deudores.fold(0, (suma, cuenta) => suma + cuenta.debe);
     return TarjetaTicket(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -126,10 +131,17 @@ class _ResumenGranja extends StatelessWidget {
           ),
           const SizedBox(width: e12),
           Expanded(
-            child: CifraTicket(
-              etiqueta: 'Galpones libres',
-              cifra: '$libres',
-              detalle: libres == 0 ? 'todos tienen lote' : 'listos para pollitos',
+            child: Pulsable(
+              onTap: () => context.go('/clientes'),
+              child: CifraTicket(
+                etiqueta: 'Te deben',
+                cifra: plata(teDeben),
+                detalle: switch (deudores.length) {
+                  0 => 'nadie te debe',
+                  1 => '1 cliente con fiado',
+                  final n => '$n clientes con fiado',
+                },
+              ),
             ),
           ),
         ],

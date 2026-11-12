@@ -357,6 +357,29 @@ void main() {
     expect(remoto.tablas['lotes']!['l1']!['cerrado_en'], isNotNull);
   });
 
+  test('fiado viaja como sí o no y en el celular queda como 1 o 0', () async {
+    final venta = {
+      'id': 'v1',
+      'granja_id': granja,
+      'lote_id': 'l1',
+      'cliente_id': 'jaime',
+      'fecha': '2026-10-10',
+      'pollos': 10,
+      'libras': 50.0,
+      'precio_libra': 5600,
+      'total': 280000,
+      'fiado': 1,
+    };
+    await local.guardarFila('ventas', venta, titulo: 'Venta', autor: 'ana');
+
+    await sincronizador.sincronizar(granja);
+    expect(remoto.tablas['ventas']!['v1']!['fiado'], isTrue);
+
+    remoto.otroGuarda('ventas', {...venta, 'id': 'v2', 'fiado': false});
+    await sincronizador.sincronizar(granja);
+    expect((await local.fila('ventas', 'v2'))!['fiado'], 0);
+  });
+
   test('lo guardado en el celular sobrevive entre una lectura y otra', () async {
     await local.guardarDato('granjas:ana', [
       {'id': granja, 'nombre': 'Granja La Esperanza', 'rol': 'dueno'},

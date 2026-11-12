@@ -1,10 +1,15 @@
 // DOMINIO: las reglas del galpón, en Dart puro.
 
+import '../../../compartido/cifras.dart';
+
 /// Error cuando un dato del galpón rompe una regla del negocio.
 class GalponInvalido implements Exception {
-  const GalponInvalido(this.mensaje);
+  const GalponInvalido(this.mensaje, {this.campo});
 
   final String mensaje;
+
+  /// El campo del formulario donde está el error, para señalarlo ahí.
+  final String? campo;
 
   @override
   String toString() => 'GalponInvalido: $mensaje';
@@ -37,19 +42,31 @@ class Galpon {
   }) {
     final limpio = nombre.trim();
     if (limpio.isEmpty) {
-      throw const GalponInvalido('El galpón necesita un nombre.');
+      throw const GalponInvalido('El galpón necesita un nombre.', campo: 'nombre');
     }
     final repetido = otros.any(
       (otro) => otro.id != id && otro.nombre.toLowerCase() == limpio.toLowerCase(),
     );
     if (repetido) {
-      throw const GalponInvalido('Ya tienes un galpón con ese nombre.');
+      throw const GalponInvalido('Ya tienes un galpón con ese nombre.', campo: 'nombre');
     }
     if (capacidad != null && capacidad <= 0) {
-      throw const GalponInvalido('La capacidad debe ser mayor que cero.');
+      throw const GalponInvalido('La capacidad debe ser mayor que cero.', campo: 'capacidad');
+    }
+    if (capacidad != null && capacidad > Topes.pollos) {
+      throw const GalponInvalido(
+        'Más de 100.000 pollos en un galpón no parece correcto. Revisa la cifra.',
+        campo: 'capacidad',
+      );
     }
     if ((largoM != null && largoM <= 0) || (anchoM != null && anchoM <= 0)) {
-      throw const GalponInvalido('Las medidas deben ser mayores que cero.');
+      throw const GalponInvalido('Las medidas deben ser mayores que cero.', campo: 'medidas');
+    }
+    if ((largoM ?? 0) > Topes.metros || (anchoM ?? 0) > Topes.metros) {
+      throw const GalponInvalido(
+        'Más de 1.000 metros no parece correcto. Revisa las medidas.',
+        campo: 'medidas',
+      );
     }
     final donde = ubicacion?.trim() ?? '';
     return Galpon.reconstruir(

@@ -9,6 +9,7 @@ import '../../../../compartido/diseno/movimiento.dart';
 import '../../../../compartido/diseno/pulsable.dart';
 import '../../../../compartido/diseno/tema.dart';
 import '../../../../compartido/errores.dart';
+import '../../../../compartido/formato.dart';
 import '../../dominio/granja.dart';
 
 class PantallaPersonas extends ConsumerWidget {
@@ -141,15 +142,6 @@ class _FilaMiembro extends StatelessWidget {
       ),
     );
   }
-}
-
-/// "María José Peñaloza" -> "MP"; "Jo" -> "J".
-String iniciales(String nombre) {
-  final palabras = nombre.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty);
-  if (palabras.isEmpty) return '';
-  final primera = palabras.first.characters.first;
-  final ultima = palabras.length > 1 ? palabras.last.characters.first : '';
-  return (primera + ultima).toUpperCase();
 }
 
 class _HojaInvitar extends ConsumerStatefulWidget {

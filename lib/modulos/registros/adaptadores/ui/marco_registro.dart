@@ -6,8 +6,10 @@ import '../../../../compartido/diseno/colores.dart';
 import '../../../../compartido/diseno/encabezado_maiz.dart';
 import '../../../../compartido/diseno/espacios.dart';
 import '../../../../compartido/diseno/estado_error.dart';
+import '../../../../compartido/diseno/formulario.dart';
 import '../../../../compartido/diseno/pulsable.dart';
 import '../../../../compartido/diseno/tema.dart';
+import '../../../../compartido/formato.dart';
 import '../../../galpones/dominio/galpon.dart';
 import '../../../lotes/dominio/lote.dart';
 import '../../dominio/cuentas_lote.dart';
@@ -45,6 +47,7 @@ class MarcoRegistro extends StatelessWidget {
     required this.textoGuardar,
     required this.guardando,
     required this.alGuardar,
+    required this.hayCambios,
     this.error,
     this.alBorrar,
   });
@@ -58,6 +61,9 @@ class MarcoRegistro extends StatelessWidget {
   final String textoGuardar;
   final bool guardando;
   final VoidCallback alGuardar;
+  final bool hayCambios;
+
+  /// El error que no es de un campo en particular.
   final String? error;
 
   /// Solo al corregir un registro que la persona puede cambiar.
@@ -65,7 +71,9 @@ class MarcoRegistro extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return ProtegerCambios(
+      hayCambios: hayCambios,
+      child: Scaffold(
       body: ListView(
         padding: const EdgeInsets.only(bottom: e24),
         children: [
@@ -101,6 +109,7 @@ class MarcoRegistro extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -155,4 +164,38 @@ class EtiquetaCampo extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Quién anotó algo, dicho para la persona que está usando la app.
+String quienAnoto(WidgetRef ref, String? usuarioId) {
+  if (usuarioId == null) return 'alguien';
+  if (usuarioId == ref.read(usuarioIdProvider)) return 'tú';
+  final granja = ref.read(granjaActualProvider);
+  if (granja == null) return 'otra persona';
+  final miembros = ref.read(miembrosProvider(granja.id)).asData?.value ?? const [];
+  return miembros.where((m) => m.usuarioId == usuarioId).firstOrNull?.nombre ??
+      'otra persona';
+}
+
+/// Aviso cuando en el mismo lote y el mismo día ya hay un registro que se
+/// parece al que se va a guardar. [parecido] dice cuándo se parecen y
+/// [describir] lo nombra, por ejemplo "3 muertos".
+String? avisoRepetido<T extends Registro>(
+  WidgetRef ref, {
+  required String loteId,
+  required DateTime fecha,
+  required String? excepto,
+  required bool Function(T registro) parecido,
+  required String Function(T registro) describir,
+}) {
+  final dia = DateTime.utc(fecha.year, fecha.month, fecha.day);
+  final repetido = (ref.read(registrosProvider).asData?.value ?? const <Registro>[])
+      .whereType<T>()
+      .where((r) => r.id != excepto && r.loteId == loteId && r.fecha == dia && parecido(r))
+      .firstOrNull;
+  if (repetido == null) return null;
+  final quien = quienAnoto(ref, repetido.creadoPor);
+  final anoto = quien == 'tú' ? 'ya anotaste' : '$quien ya anotó';
+  return 'El ${fechaCorta(dia)} $anoto ${describir(repetido)}. '
+      'Guárdalo solo si es otro registro.';
 }

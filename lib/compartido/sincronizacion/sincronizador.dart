@@ -32,7 +32,7 @@ class Sincronizador {
     for (final pendiente in await _local.pendientes(granjaId)) {
       try {
         if (pendiente.datos case final fila?) {
-          await _remoto.guardar(pendiente.tabla, fila);
+          await _remoto.guardar(pendiente.tabla, filaParaServidor(fila));
         } else {
           await _remoto.borrar(pendiente.tabla, pendiente.filaId);
         }

@@ -2,6 +2,8 @@
 // Aquí no se importa Flutter, Supabase ni nada externo. Si mañana cambiamos
 // de base de datos o de pantallas, este archivo no se toca.
 
+import '../../../compartido/cifras.dart';
+
 /// En qué alimento debería estar el lote según los días que lleva.
 enum EtapaAlimento {
   /// Del día 0 al 21: bulto de inicio.
@@ -16,9 +18,12 @@ enum EtapaAlimento {
 
 /// Error cuando un dato del lote rompe una regla del negocio.
 class LoteInvalido implements Exception {
-  const LoteInvalido(this.mensaje);
+  const LoteInvalido(this.mensaje, {this.campo});
 
   final String mensaje;
+
+  /// El campo del formulario donde está el error, para señalarlo ahí.
+  final String? campo;
 
   @override
   String toString() => 'LoteInvalido: $mensaje';
@@ -56,13 +61,25 @@ class Lote {
     required DateTime hoy,
   }) {
     if (cantidadInicial <= 0) {
-      throw const LoteInvalido('La cantidad de pollos debe ser mayor que cero.');
+      throw const LoteInvalido(
+        'La cantidad de pollos debe ser mayor que cero.',
+        campo: 'pollitos',
+      );
+    }
+    if (cantidadInicial > Topes.pollos) {
+      throw const LoteInvalido(
+        'Más de 100.000 pollitos en un lote no parece correcto. Revisa la cifra.',
+        campo: 'pollitos',
+      );
     }
     if (precioCompraTotal < 0) {
-      throw const LoteInvalido('El precio de compra no puede ser negativo.');
+      throw const LoteInvalido('El precio de compra no puede ser negativo.', campo: 'precio');
+    }
+    if (precioCompraTotal > Topes.plata) {
+      throw const LoteInvalido('Ese precio es demasiado alto. Revisa la cifra.', campo: 'precio');
     }
     if (_soloFecha(fechaLlegada).isAfter(_soloFecha(hoy))) {
-      throw const LoteInvalido('La fecha de llegada no puede ser en el futuro.');
+      throw const LoteInvalido('La fecha de llegada no puede ser en el futuro.', campo: 'fecha');
     }
     return Lote.reconstruir(
       id: id,

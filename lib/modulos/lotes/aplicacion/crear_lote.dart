@@ -28,6 +28,7 @@ class CrearLote {
     if (await _repositorio.abiertoEn(galponId) != null) {
       throw const LoteInvalido(
         'Ese galpón todavía tiene un lote abierto. Ciérralo antes de recibir pollitos nuevos.',
+        campo: 'galpon',
       );
     }
     final lote = Lote.nuevo(

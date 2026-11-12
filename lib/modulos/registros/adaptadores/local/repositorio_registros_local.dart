@@ -4,6 +4,7 @@
 import '../../../../compartido/fechas.dart';
 import '../../../../compartido/formato.dart';
 import '../../../../compartido/local/base_local.dart';
+import '../../dominio/marca.dart';
 import '../../dominio/registro.dart';
 
 class RepositorioRegistrosLocal {
@@ -25,6 +26,7 @@ class RepositorioRegistrosLocal {
             CompraAlimento c => {
                 'tipo': c.tipo.name,
                 'marca': c.marca,
+                'marca_id': c.marcaId,
                 'kilos_por_bulto': c.kilosPorBulto,
                 'bultos': c.bultos,
                 'precio_por_bulto': c.precioPorBulto,
@@ -38,6 +40,14 @@ class RepositorioRegistrosLocal {
                 'nombre': m.nombre,
                 'costo': m.costo,
                 'nota': m.nota,
+              },
+            Venta v => {
+                'cliente_id': v.clienteId,
+                'pollos': v.pollos,
+                'libras': v.libras,
+                'precio_libra': v.precioLibra,
+                'total': v.total,
+                'fiado': v.fiado ? 1 : 0,
               },
           },
         },
@@ -63,6 +73,7 @@ class RepositorioRegistrosLocal {
           fecha: DateTime.parse(f['fecha']! as String),
           tipo: TipoAlimento.values.byName(f['tipo']! as String),
           marca: f['marca']! as String,
+          marcaId: f['marca_id'] as String?,
           kilosPorBulto: (f['kilos_por_bulto']! as num).toDouble(),
           bultos: f['bultos']! as int,
           precioPorBulto: f['precio_por_bulto']! as int,
@@ -96,6 +107,20 @@ class RepositorioRegistrosLocal {
           creadoPor: f['creado_por'] as String?,
           creadoEn: _fechaHora(f['creado_en']),
         ),
+      for (final f in await _local.filas('ventas', granjaId: granjaId))
+        Venta.reconstruir(
+          id: f['id']! as String,
+          granjaId: granjaId,
+          loteId: f['lote_id']! as String,
+          fecha: DateTime.parse(f['fecha']! as String),
+          clienteId: f['cliente_id']! as String,
+          pollos: f['pollos']! as int,
+          libras: (f['libras']! as num).toDouble(),
+          precioLibra: f['precio_libra']! as int,
+          fiado: f['fiado'] == 1,
+          creadoPor: f['creado_por'] as String?,
+          creadoEn: _fechaHora(f['creado_en']),
+        ),
     ];
     final nunca = DateTime.utc(2000);
     registros.sort((a, b) {
@@ -107,10 +132,43 @@ class RepositorioRegistrosLocal {
     return registros;
   }
 
+  Future<void> guardarMarca(Marca marca) => _local.guardarFila(
+        'marcas',
+        {
+          'id': marca.id,
+          'granja_id': marca.granjaId,
+          'nombre': marca.nombre,
+          'kilos_por_bulto': marca.kilosPorBulto,
+          'en_uso': marca.enUso ? 1 : 0,
+        },
+        titulo: 'Marca ${marca.nombre}',
+        autor: autor,
+      );
+
+  Future<void> borrarMarca(Marca marca) => _local.borrarFila(
+        'marcas',
+        marca.id,
+        granjaId: marca.granjaId,
+        titulo: 'Marca ${marca.nombre}',
+      );
+
+  Future<List<Marca>> marcas(String granjaId) async => [
+        for (final f in await _local.filas('marcas', granjaId: granjaId))
+          Marca.reconstruir(
+            id: f['id']! as String,
+            granjaId: granjaId,
+            nombre: f['nombre']! as String,
+            kilosPorBulto: (f['kilos_por_bulto'] as num?)?.toDouble(),
+            enUso: f['en_uso'] != 0,
+            creadoPor: f['creado_por'] as String?,
+          ),
+      ];
+
   String _tabla(Registro registro) => switch (registro) {
         CompraAlimento() => 'compras_alimento',
         Mortalidad() => 'mortalidad',
         Medicamento() => 'medicamentos',
+        Venta() => 'ventas',
       };
 
   String _titulo(Registro registro) {
@@ -121,6 +179,8 @@ class RepositorioRegistrosLocal {
       Mortalidad(:final cantidad) =>
         '$cantidad ${cantidad == 1 ? 'muerto' : 'muertos'} del $dia',
       Medicamento(:final nombre) => '$nombre del $dia',
+      Venta(:final pollos) =>
+        'Venta de $pollos ${pollos == 1 ? 'pollo' : 'pollos'} del $dia',
     };
   }
 

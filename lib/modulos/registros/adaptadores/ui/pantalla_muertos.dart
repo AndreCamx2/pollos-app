@@ -1,7 +1,6 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -12,6 +11,7 @@ import '../../../../compartido/diseno/colores.dart';
 import '../../../../compartido/diseno/espacios.dart';
 import '../../../../compartido/diseno/estado_error.dart';
 import '../../../../compartido/diseno/fichas.dart';
+import '../../../../compartido/diseno/formulario.dart';
 import '../../../../compartido/diseno/hoja_confirmar.dart';
 import '../../../../compartido/diseno/pulsable.dart';
 import '../../../../compartido/diseno/selector_fecha.dart';
@@ -33,14 +33,17 @@ class PantallaMuertos extends ConsumerStatefulWidget {
   ConsumerState<PantallaMuertos> createState() => _PantallaMuertosState();
 }
 
-class _PantallaMuertosState extends ConsumerState<PantallaMuertos> {
+class _PantallaMuertosState extends ConsumerState<PantallaMuertos>
+    with FormularioGranja {
   final _cantidad = TextEditingController(text: '1');
   final _nota = TextEditingController();
   CausaMuerte? _causa;
   var _fecha = DateTime.now();
   Mortalidad? _original;
   var _guardando = false;
-  String? _error;
+
+  @override
+  String get firma => [_cantidad.text, _nota.text, _causa, fechaCorta(_fecha)].join('|');
 
   @override
   void initState() {
@@ -54,6 +57,7 @@ class _PantallaMuertosState extends ConsumerState<PantallaMuertos> {
     }
     // Lo que quedará vivo se calcula mientras la persona escribe.
     _cantidad.addListener(_redibujar);
+    recordarInicio();
   }
 
   void _redibujar() => setState(() {});
@@ -73,7 +77,7 @@ class _PantallaMuertosState extends ConsumerState<PantallaMuertos> {
   Future<void> _guardar(LoteAbierto abierto) async {
     setState(() {
       _guardando = true;
-      _error = null;
+      limpiarError();
     });
     try {
       final registro = Mortalidad.nueva(
@@ -90,7 +94,7 @@ class _PantallaMuertosState extends ConsumerState<PantallaMuertos> {
       await ref.read(sincronizacionProvider.notifier).huboCambios();
       if (mounted) context.pop();
     } on RegistroInvalido catch (e) {
-      setState(() => _error = e.mensaje);
+      mostrarError(e.mensaje, e.campo);
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
@@ -128,7 +132,8 @@ class _PantallaMuertosState extends ConsumerState<PantallaMuertos> {
       textoGuardar: 'Guardar',
       guardando: _guardando,
       alGuardar: () => _guardar(abierto),
-      error: _error,
+      error: errorGeneral,
+      hayCambios: hayCambios,
       alBorrar: original == null ? null : () => _borrar(original),
       campos: [
         const EtiquetaCampo('Cuántos se murieron'),
@@ -145,8 +150,9 @@ class _PantallaMuertosState extends ConsumerState<PantallaMuertos> {
                 controller: _cantidad,
                 textAlign: TextAlign.center,
                 keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                inputFormatters: soloCantidad,
                 style: textos.headlineSmall,
+                decoration: InputDecoration(errorText: errorDe('cantidad'), errorMaxLines: 3),
               ),
             ),
             const SizedBox(width: e12),
@@ -181,6 +187,10 @@ class _PantallaMuertosState extends ConsumerState<PantallaMuertos> {
           desde: lote.fechaLlegada,
           alCambiar: (fecha) => setState(() => _fecha = fecha),
         ),
+        if (errorDe('fecha') case final mensaje?) ...[
+          const SizedBox(height: e8),
+          AvisoError(mensaje),
+        ],
       ],
       resumen: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -193,6 +203,19 @@ class _PantallaMuertosState extends ConsumerState<PantallaMuertos> {
                   '${porcentaje(muertosAntes + min(cantidad, disponibles))}',
             ),
           ),
+          if (original == null && cantidad > 0)
+            if (avisoRepetido<Mortalidad>(
+              ref,
+              loteId: lote.id,
+              fecha: _fecha,
+              excepto: null,
+              parecido: (m) => m.cantidad == cantidad,
+              describir: (m) => '${m.cantidad} ${m.cantidad == 1 ? 'muerto' : 'muertos'}',
+            )
+                case final aviso?) ...[
+              const SizedBox(height: e12),
+              AvisoAtencion(aviso),
+            ],
           if (cantidad > disponibles) ...[
             const SizedBox(height: e12),
             AvisoAtencion('Solo quedan ${miles(disponibles)} vivos en este galpón.'),

@@ -24,6 +24,10 @@ class CuentasLote {
           _comproEngorde = true;
         case Medicamento(:final costo):
           _medicina += costo;
+        case Venta(:final pollos, :final libras, :final total):
+          _vendidos += pollos;
+          _librasVendidas += libras;
+          _ventas += total;
       }
     }
   }
@@ -34,13 +38,22 @@ class CuentasLote {
   var _alimentoInicio = 0;
   var _alimentoEngorde = 0;
   var _medicina = 0;
+  var _vendidos = 0;
+  var _librasVendidas = 0.0;
+  var _ventas = 0;
   var _comproEngorde = false;
   DateTime? _primerRegistro;
 
   int get muertos => _muertos;
 
-  // shortcut: las ventas llegan en la parte 5.
-  int get vendidos => 0;
+  int get vendidos => _vendidos;
+  double get librasVendidas => _librasVendidas;
+
+  /// Lo que suman las ventas, fiadas o de contado.
+  int get ventas => _ventas;
+
+  /// Lo vendido menos lo invertido; negativo mientras no se ha recuperado.
+  int get ganancia => ventas - invertido;
 
   /// Nunca menos de cero, aunque lo que llegue del servidor no cuadre.
   int get vivos => max(0, lote.cantidadInicial - muertos - vendidos);
@@ -67,5 +80,10 @@ class CuentasLote {
 
   /// Los vivos sin contar [registro], para corregirlo sin contarlo dos veces.
   int vivosSin(Registro? registro) =>
-      vivos + (registro is Mortalidad ? registro.cantidad : 0);
+      vivos +
+      switch (registro) {
+        Mortalidad(:final cantidad) => cantidad,
+        Venta(:final pollos) => pollos,
+        _ => 0,
+      };
 }

@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../compartido/diseno/estado_error.dart';
+import '../modulos/clientes/adaptadores/ui/pantalla_abono.dart';
+import '../modulos/clientes/adaptadores/ui/pantalla_clientes.dart';
+import '../modulos/clientes/adaptadores/ui/pantalla_formulario_cliente.dart';
 import '../modulos/galpones/adaptadores/ui/pantalla_formulario_galpon.dart';
 import '../modulos/galpones/adaptadores/ui/pantalla_galpon.dart';
 import '../modulos/galpones/adaptadores/ui/pantalla_galpones.dart';
@@ -12,8 +15,11 @@ import '../modulos/granja/adaptadores/ui/pantalla_personas.dart';
 import '../modulos/granja/adaptadores/ui/pantalla_sin_granja.dart';
 import '../modulos/lotes/adaptadores/ui/pantalla_formulario_lote.dart';
 import '../modulos/registros/adaptadores/ui/pantalla_compra_alimento.dart';
+import '../modulos/registros/adaptadores/ui/pantalla_formulario_marca.dart';
 import '../modulos/registros/adaptadores/ui/pantalla_medicina.dart';
 import '../modulos/registros/adaptadores/ui/pantalla_muertos.dart';
+import '../modulos/registros/adaptadores/ui/pantalla_venta.dart';
+import 'barra_secciones.dart';
 import 'proveedores.dart';
 
 const _deEntrada = {'/cargando', '/entrar', '/completar-cuenta', '/sin-granja'};
@@ -37,56 +43,83 @@ final rutasProvider = Provider<GoRouter>((ref) {
         builder: (_, _) => const PantallaCompletarCuenta(),
       ),
       GoRoute(path: '/sin-granja', builder: (_, _) => const PantallaSinGranja()),
-      GoRoute(
-        path: '/',
-        builder: (_, _) => const PantallaGalpones(),
+      ShellRoute(
+        builder: (_, estado, pantalla) =>
+            BarraSecciones(ruta: estado.matchedLocation, child: pantalla),
         routes: [
-          GoRoute(path: 'personas', builder: (_, _) => const PantallaPersonas()),
-          GoRoute(
-            path: 'galpones/nuevo',
-            builder: (_, _) => const PantallaFormularioGalpon(),
-          ),
-          GoRoute(
-            path: 'galpones/:id',
-            builder: (_, estado) =>
-                PantallaGalpon(galponId: estado.pathParameters['id']!),
-          ),
-          GoRoute(
-            path: 'galpones/:id/editar',
-            builder: (_, estado) =>
-                PantallaFormularioGalpon(galponId: estado.pathParameters['id']),
-          ),
-          GoRoute(
-            path: 'lotes/nuevo',
-            builder: (_, estado) => PantallaFormularioLote(
-              galponId: estado.uri.queryParameters['galpon'],
-            ),
-          ),
-          GoRoute(
-            path: 'lotes/:id/editar',
-            builder: (_, estado) =>
-                PantallaFormularioLote(loteId: estado.pathParameters['id']),
-          ),
-          for (final (camino, pantalla) in <(String, Widget Function({required String loteId, String? registroId}))>[
-            ('alimento', PantallaCompraAlimento.new),
-            ('muertos', PantallaMuertos.new),
-            ('medicina', PantallaMedicina.new),
-          ])
+          GoRoute(path: '/', builder: (_, _) => const PantallaGalpones()),
+          GoRoute(path: '/clientes', builder: (_, _) => const PantallaClientes()),
+        ],
+      ),
+      GoRoute(path: '/personas', builder: (_, _) => const PantallaPersonas()),
+      GoRoute(
+        path: '/galpones/nuevo',
+        builder: (_, _) => const PantallaFormularioGalpon(),
+      ),
+      GoRoute(
+        path: '/galpones/:id',
+        builder: (_, estado) => PantallaGalpon(galponId: estado.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/galpones/:id/editar',
+        builder: (_, estado) =>
+            PantallaFormularioGalpon(galponId: estado.pathParameters['id']),
+      ),
+      GoRoute(
+        path: '/lotes/nuevo',
+        builder: (_, estado) => PantallaFormularioLote(
+          galponId: estado.uri.queryParameters['galpon'],
+        ),
+      ),
+      GoRoute(
+        path: '/lotes/:id/editar',
+        builder: (_, estado) =>
+            PantallaFormularioLote(loteId: estado.pathParameters['id']),
+      ),
+      for (final (camino, pantalla) in <(String, Widget Function({required String loteId, String? registroId}))>[
+        ('alimento', PantallaCompraAlimento.new),
+        ('muertos', PantallaMuertos.new),
+        ('medicina', PantallaMedicina.new),
+        ('venta', PantallaVenta.new),
+      ])
+        GoRoute(
+          path: '/lotes/:lote/$camino',
+          builder: (_, estado) => pantalla(loteId: estado.pathParameters['lote']!),
+          routes: [
             GoRoute(
-              path: 'lotes/:lote/$camino',
+              path: ':registro',
               builder: (_, estado) => pantalla(
                 loteId: estado.pathParameters['lote']!,
+                registroId: estado.pathParameters['registro'],
               ),
-              routes: [
-                GoRoute(
-                  path: ':registro',
-                  builder: (_, estado) => pantalla(
-                    loteId: estado.pathParameters['lote']!,
-                    registroId: estado.pathParameters['registro'],
-                  ),
-                ),
-              ],
             ),
+          ],
+        ),
+      GoRoute(path: '/marcas/nueva', builder: (_, _) => const PantallaFormularioMarca()),
+      GoRoute(
+        path: '/marcas/:id/editar',
+        builder: (_, estado) => PantallaFormularioMarca(marcaId: estado.pathParameters['id']),
+      ),
+      GoRoute(
+        path: '/clientes/nuevo',
+        builder: (_, _) => const PantallaFormularioCliente(),
+      ),
+      GoRoute(
+        path: '/clientes/:id/editar',
+        builder: (_, estado) =>
+            PantallaFormularioCliente(clienteId: estado.pathParameters['id']),
+      ),
+      GoRoute(
+        path: '/clientes/:id/abono',
+        builder: (_, estado) => PantallaAbono(clienteId: estado.pathParameters['id']!),
+        routes: [
+          GoRoute(
+            path: ':abono',
+            builder: (_, estado) => PantallaAbono(
+              clienteId: estado.pathParameters['id']!,
+              abonoId: estado.pathParameters['abono'],
+            ),
+          ),
         ],
       ),
     ],
