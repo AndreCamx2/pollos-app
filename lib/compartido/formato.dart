@@ -29,6 +29,18 @@ String decimal(num numero) {
 /// "10 oct"
 String fechaCorta(DateTime fecha) => '${fecha.day} ${_meses[fecha.month - 1]}';
 
+/// Para indicadores finos como la conversión: 2.183 -> "2,18".
+String dosDecimales(num numero) => numero.toStringAsFixed(2).replaceAll('.', ',');
+
+/// "oct"
+String mesCorto(DateTime fecha) => _meses[fecha.month - 1];
+
+/// 5590000 -> "$5,6 M"; para cifras que no caben enteras, como en una gráfica.
+String millones(int pesos) {
+  final signo = pesos < 0 ? '-' : '';
+  return '$signo\$${decimal(pesos.abs() / 1000000)} M';
+}
+
 /// Lee lo que la persona escribió en un campo de números enteros, con o sin
 /// puntos de miles. Null si no escribió ningún número.
 int? leerEntero(String texto) =>

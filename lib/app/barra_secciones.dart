@@ -16,6 +16,7 @@ class BarraSecciones extends StatelessWidget {
   static const _secciones = [
     ('/', 'Galpones', Figura.galpon),
     ('/clientes', 'Clientes', Figura.personas),
+    ('/cierres', 'Cierres', Figura.barras),
   ];
 
   @override

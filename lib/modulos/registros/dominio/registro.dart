@@ -21,7 +21,10 @@ enum CausaMuerte {
   calor('Calor'),
   enfermedad('Enfermedad'),
   aplastamiento('Aplastamiento'),
-  otra('Otra');
+  otra('Otra'),
+
+  /// No aparecieron al cerrar el lote: no se cuentan como mortalidad.
+  faltante('Faltante');
 
   const CausaMuerte(this.etiqueta);
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -11,6 +13,7 @@ import '../../../../compartido/diseno/espacios.dart';
 import '../../../../compartido/diseno/estado_error.dart';
 import '../../../../compartido/diseno/hoja_confirmar.dart';
 import '../../../../compartido/diseno/icono_modulo.dart';
+import '../../../../compartido/diseno/movimiento.dart';
 import '../../../../compartido/diseno/pulsable.dart';
 import '../../../../compartido/diseno/tarjeta_ticket.dart';
 import '../../../../compartido/diseno/tema.dart';
@@ -75,8 +78,27 @@ class PantallaGalpon extends ConsumerWidget {
           if (lote != null && cuentas != null) ...[
             Padding(
               padding: const EdgeInsets.fromLTRB(e16, e12, e16, 0),
-              child: _Invertido(cuentas),
+              child: Pulsable(
+                onTap: () => context.push('/lotes/${lote.id}/cierre'),
+                child: _Invertido(cuentas),
+              ),
             ),
+            Center(
+              child: TextButton(
+                onPressed: () => context.push('/lotes/${lote.id}/cierre'),
+                child: const Text('Ver cómo va el lote'),
+              ),
+            ),
+            if (administra && cuentas.vivos == 0 && cuentas.salieron > 0)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(e16, 0, e16, e8),
+                child: Pulsable(
+                  onTap: () => _cerrar(context, ref, galpon, cuentas),
+                  child: const AvisoAtencion(
+                    'Ya no quedan pollos en el galpón. Toca para cerrar el lote y ver cuánto ganaste.',
+                  ),
+                ),
+              ),
             Padding(
               padding: const EdgeInsets.fromLTRB(e20, e24, e20, e12),
               child: Text('Registrar', style: textos.titleLarge),
@@ -122,6 +144,7 @@ class PantallaGalpon extends ConsumerWidget {
                   for (final (i, anterior) in anteriores.indexed)
                     _FilaLoteAnterior(
                       lote: anterior,
+                      alTocar: () => context.push('/lotes/${anterior.id}/cierre'),
                       // Solo el último, y solo si el galpón sigue libre:
                       // dos lotes abiertos no caben en un galpón.
                       alReabrir: administra && lote == null && i == 0
@@ -137,6 +160,8 @@ class PantallaGalpon extends ConsumerWidget {
     );
   }
 
+  /// Antes de cerrar, los pollos tienen que cuadrar: si en las cuentas
+  /// quedan vivos, se pregunta qué pasó con ellos.
   Future<void> _cerrar(
     BuildContext context,
     WidgetRef ref,
@@ -144,20 +169,41 @@ class PantallaGalpon extends ConsumerWidget {
     CuentasLote cuentas,
   ) async {
     final quedan = cuentas.vivos;
-    final acepto = await confirmar(
-      context,
-      titulo: '¿Cerrar el lote de ${galpon.nombre}?',
-      detalle: [
-        if (quedan > 0)
-          'Todavía quedan ${miles(quedan)} pollos vivos en las cuentas del lote.',
-        'Ya no se podrá anotar nada en este lote y el galpón queda libre para '
-            'pollitos nuevos. Si fue un error, lo puedes reabrir.',
-      ].join(' '),
-      accion: 'Cerrar lote',
-    );
-    if (!acepto) return;
-    await ref.read(repositorioLotesProvider).guardar(cuentas.lote.cerrar(DateTime.now()));
+    final lote = cuentas.lote;
+    if (quedan > 0) {
+      final cuadre = await showModalBottomSheet<_Cuadre>(
+        context: context,
+        isScrollControlled: true,
+        sheetAnimationStyle: animacionDeHoja,
+        builder: (_) => _HojaCuadrar(quedan: quedan),
+      );
+      if (cuadre == null || cuadre == _Cuadre.quedanPollos) return;
+      await ref.read(repositorioRegistrosProvider).guardar(
+            Mortalidad.nueva(
+              id: nuevoId(),
+              lote: lote,
+              fecha: DateTime.now(),
+              cantidad: quedan,
+              causa: cuadre == _Cuadre.faltan ? CausaMuerte.faltante : null,
+              nota: 'Anotado al cerrar el lote',
+              vivosSinEste: quedan,
+              hoy: DateTime.now(),
+            ),
+          );
+    } else {
+      if (!context.mounted) return;
+      final acepto = await confirmar(
+        context,
+        titulo: '¿Cerrar el lote de ${galpon.nombre}?',
+        detalle: 'Ya no se podrá anotar nada en este lote y el galpón queda libre '
+            'para pollitos nuevos. Si fue un error, lo puedes reabrir.',
+        accion: 'Cerrar lote',
+      );
+      if (!acepto) return;
+    }
+    await ref.read(repositorioLotesProvider).guardar(lote.cerrar(DateTime.now()));
     await ref.read(sincronizacionProvider.notifier).huboCambios();
+    if (context.mounted) unawaited(context.push('/lotes/${lote.id}/cierre'));
   }
 
   Future<void> _reabrir(
@@ -550,10 +596,12 @@ class _FilaMovimiento extends StatelessWidget {
             color: ColoresGranja.granero,
             tamano: 40,
           ),
-          [
-            '${m.cantidad} ${m.cantidad == 1 ? 'muerto' : 'muertos'}',
-            if (m.causa case final causa?) causa.etiqueta.toLowerCase(),
-          ].join(' · '),
+          m.causa == CausaMuerte.faltante
+              ? '${m.cantidad} ${m.cantidad == 1 ? 'faltante' : 'faltantes'}'
+              : [
+                  '${m.cantidad} ${m.cantidad == 1 ? 'muerto' : 'muertos'}',
+                  if (m.causa case final causa?) causa.etiqueta.toLowerCase(),
+                ].join(' · '),
           '−${m.cantidad}',
           ColoresGranja.granero,
         ),
@@ -703,16 +751,25 @@ class _TarjetaPapel extends StatelessWidget {
 }
 
 class _FilaLoteAnterior extends StatelessWidget {
-  const _FilaLoteAnterior({required this.lote, required this.alReabrir});
+  const _FilaLoteAnterior({
+    required this.lote,
+    required this.alTocar,
+    required this.alReabrir,
+  });
 
   final Lote lote;
+
+  /// Abre el cierre del lote.
+  final VoidCallback alTocar;
   final VoidCallback? alReabrir;
 
   @override
   Widget build(BuildContext context) {
     final textos = Theme.of(context).textTheme;
     final cierre = lote.cerradoEn;
-    return Padding(
+    return Pulsable(
+      onTap: alTocar,
+      child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: e16, vertical: e12),
       child: Row(
         children: [
@@ -734,8 +791,11 @@ class _FilaLoteAnterior extends StatelessWidget {
             ),
           ),
           if (alReabrir != null)
-            TextButton(onPressed: alReabrir, child: const Text('Reabrir')),
+            TextButton(onPressed: alReabrir, child: const Text('Reabrir'))
+          else
+            const Icon(Icons.chevron_right_rounded, color: ColoresGranja.tintaSuave),
         ],
+      ),
       ),
     );
   }
@@ -756,6 +816,77 @@ class _GalponBorrado extends StatelessWidget {
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyLarge,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+enum _Cuadre { murieron, faltan, quedanPollos }
+
+class _HojaCuadrar extends StatelessWidget {
+  const _HojaCuadrar({required this.quedan});
+
+  final int quedan;
+
+  @override
+  Widget build(BuildContext context) {
+    final textos = Theme.of(context).textTheme;
+    final pollos = quedan == 1 ? '1 pollo' : '${miles(quedan)} pollos';
+    final opciones = [
+      (
+        _Cuadre.murieron,
+        'Se murieron',
+        'Se anotan $pollos como muertos y cuentan en la mortalidad.',
+      ),
+      (
+        _Cuadre.faltan,
+        'Faltan, no aparecen',
+        'Robados, perdidos o mal contados. Se anotan como faltantes, aparte de los muertos.',
+      ),
+      (
+        _Cuadre.quedanPollos,
+        'Todavía hay pollos',
+        'No se cierra el lote. Anota primero las ventas que falten.',
+      ),
+    ];
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(e20, 0, e20, e16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Quedan $pollos en las cuentas', style: textos.titleLarge),
+            const SizedBox(height: e4),
+            Text(
+              'Para cerrar, los pollos tienen que cuadrar. ¿Qué pasó con ellos? '
+              'Si fue una mezcla, anota primero los muertos y vuelve a cerrar.',
+              style: textos.bodySmall,
+            ),
+            for (final (cuadre, titulo, ayuda) in opciones) ...[
+              const SizedBox(height: e12),
+              Pulsable(
+                onTap: () => Navigator.pop(context, cuadre),
+                child: Container(
+                  padding: const EdgeInsets.all(e16),
+                  decoration: BoxDecoration(
+                    color: ColoresGranja.papel,
+                    borderRadius: BorderRadius.circular(radioTarjeta),
+                    border: Border.all(color: ColoresGranja.borde),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(titulo, style: textos.titleMedium),
+                      const SizedBox(height: 2),
+                      Text(ayuda, style: textos.bodySmall),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );

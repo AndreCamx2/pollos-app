@@ -324,3 +324,40 @@ final nombreDeMarcaProvider = Provider<String Function(CompraAlimento)>((ref) {
   };
   return (compra) => nombres[compra.marcaId] ?? compra.marca;
 });
+
+/// Las cuentas de un lote, abierto o cerrado.
+final cuentasDeLoteProvider = Provider.family<CuentasLote?, String>((ref, loteId) {
+  final lote = (ref.watch(lotesProvider).asData?.value ?? const <Lote>[])
+      .where((l) => l.id == loteId)
+      .firstOrNull;
+  final registros = ref.watch(registrosProvider).asData?.value;
+  if (lote == null || registros == null) return null;
+  return CuentasLote(lote, registros);
+});
+
+/// Los lotes cerrados de la granja con sus cuentas, el cerrado más reciente
+/// primero.
+final lotesCerradosProvider = FutureProvider<List<CuentasLote>>((ref) async {
+  final lotes = await ref.watch(lotesProvider.future);
+  final registros = await ref.watch(registrosProvider.future);
+  return [
+    for (final lote in lotes)
+      if (!lote.abierto) CuentasLote(lote, registros),
+  ]..sort((a, b) => b.lote.cerradoEn!.compareTo(a.lote.cerradoEn!));
+});
+
+/// El nombre de cada galpón por su id, incluidos los que ya no tienen lote.
+final nombresDeGalponesProvider = Provider<Map<String, String>>(
+  (ref) => {
+    for (final g in ref.watch(galponesProvider).asData?.value ?? const <GalponConLote>[])
+      g.galpon.id: g.galpon.nombre,
+  },
+);
+
+/// El nombre de cada cliente por su id.
+final nombresDeClientesProvider = Provider<Map<String, String>>(
+  (ref) => {
+    for (final c in ref.watch(cuentasClientesProvider).asData?.value ?? const <CuentaCliente>[])
+      c.cliente.id: c.cliente.nombre,
+  },
+);

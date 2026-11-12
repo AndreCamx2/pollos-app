@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../compartido/diseno/estado_error.dart';
+import '../modulos/cierres/adaptadores/ui/pantalla_cierre_lote.dart';
+import '../modulos/cierres/adaptadores/ui/pantalla_cierres.dart';
 import '../modulos/clientes/adaptadores/ui/pantalla_abono.dart';
 import '../modulos/clientes/adaptadores/ui/pantalla_clientes.dart';
 import '../modulos/clientes/adaptadores/ui/pantalla_formulario_cliente.dart';
@@ -49,6 +51,7 @@ final rutasProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(path: '/', builder: (_, _) => const PantallaGalpones()),
           GoRoute(path: '/clientes', builder: (_, _) => const PantallaClientes()),
+          GoRoute(path: '/cierres', builder: (_, _) => const PantallaCierres()),
         ],
       ),
       GoRoute(path: '/personas', builder: (_, _) => const PantallaPersonas()),
@@ -95,6 +98,10 @@ final rutasProvider = Provider<GoRouter>((ref) {
             ),
           ],
         ),
+      GoRoute(
+        path: '/lotes/:id/cierre',
+        builder: (_, estado) => PantallaCierreLote(loteId: estado.pathParameters['id']!),
+      ),
       GoRoute(path: '/marcas/nueva', builder: (_, _) => const PantallaFormularioMarca()),
       GoRoute(
         path: '/marcas/:id/editar',
