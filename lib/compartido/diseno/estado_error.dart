@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../errores.dart';
 import 'colores.dart';
+import 'gallo.dart';
 import 'pulsable.dart';
 import 'tema.dart';
 
@@ -24,11 +25,7 @@ class EstadoError extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.cloud_off_rounded,
-              size: 40,
-              color: ColoresGranja.tintaSuave,
-            ),
+            const Gallo(tamano: 96, gesto: Gesto.duda),
             const SizedBox(height: 12),
             Text(
               mensajeDeError(error),

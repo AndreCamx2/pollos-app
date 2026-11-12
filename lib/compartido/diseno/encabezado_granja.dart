@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'colores.dart';
 import 'espacios.dart';
-import 'icono_modulo.dart';
+import 'gallo.dart';
 import 'pulsable.dart';
 
 /// La fecha de hoy y el nombre de la granja, arriba de las pantallas
@@ -24,7 +24,17 @@ class EncabezadoGranja extends StatelessWidget {
     final textos = Theme.of(context).textTheme;
     return Row(
       children: [
-        const IconoModulo(Figura.galpon, fondo: ColoresGranja.tinta, color: ColoresGranja.maiz),
+        // El gallo es la firma de la app sobre el cuadro oscuro.
+        Container(
+          width: 44,
+          height: 44,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: ColoresGranja.tinta,
+            borderRadius: BorderRadius.circular(13),
+          ),
+          child: const Gallo(tamano: 38, contorno: ColoresGranja.crema),
+        ),
         const SizedBox(width: e12),
         Expanded(
           child: Column(

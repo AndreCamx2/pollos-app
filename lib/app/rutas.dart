@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../compartido/diseno/colores.dart';
+import '../compartido/diseno/espacios.dart';
 import '../compartido/diseno/estado_error.dart';
+import '../compartido/diseno/gallo.dart';
+import '../compartido/diseno/tema.dart';
 import '../modulos/cierres/adaptadores/ui/pantalla_cierre_lote.dart';
 import '../modulos/cierres/adaptadores/ui/pantalla_cierres.dart';
 import '../modulos/clientes/adaptadores/ui/pantalla_abono.dart';
@@ -168,17 +172,38 @@ class _PantallaCargando extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final error =
         ref.watch(miNombreProvider).error ?? ref.watch(misGranjasProvider).error;
+    if (error == null) {
+      final textos = Theme.of(context).textTheme;
+      return Scaffold(
+        backgroundColor: ColoresGranja.maiz,
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const GalloCantando(),
+              const SizedBox(height: e12),
+              Text('Mis pollos', style: textos.headlineSmall),
+              Text(
+                'Abriendo tu granja',
+                style: conPeso(
+                  textos.bodyMedium!.copyWith(color: ColoresGranja.textoSobreMaiz),
+                  600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
     return Scaffold(
       body: SafeArea(
-        child: error == null
-            ? const Center(child: CircularProgressIndicator())
-            : EstadoError(
-                error: error,
-                alReintentar: () {
-                  ref.invalidate(miNombreProvider);
-                  ref.invalidate(misGranjasProvider);
-                },
-              ),
+        child: EstadoError(
+          error: error,
+          alReintentar: () {
+            ref.invalidate(miNombreProvider);
+            ref.invalidate(misGranjasProvider);
+          },
+        ),
       ),
     );
   }

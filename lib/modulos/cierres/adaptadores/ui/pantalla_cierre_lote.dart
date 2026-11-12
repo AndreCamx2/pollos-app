@@ -10,6 +10,7 @@ import '../../../../compartido/diseno/colores.dart';
 import '../../../../compartido/diseno/encabezado_maiz.dart';
 import '../../../../compartido/diseno/espacios.dart';
 import '../../../../compartido/diseno/estado_error.dart';
+import '../../../../compartido/diseno/gallo.dart';
 import '../../../../compartido/diseno/icono_modulo.dart';
 import '../../../../compartido/diseno/pulsable.dart';
 import '../../../../compartido/diseno/tarjeta_ticket.dart';
@@ -138,7 +139,7 @@ class _Ganancia extends StatelessWidget {
     };
     final total = max(cuentas.ventas, cuentas.invertido);
 
-    return TarjetaTicket(
+    final tarjeta = TarjetaTicket(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -229,6 +230,18 @@ class _Ganancia extends StatelessWidget {
           ],
         ],
       ),
+    );
+    if (!cerrado || ganancia <= 0) return tarjeta;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        tarjeta,
+        const Positioned(
+          top: -48,
+          right: e8,
+          child: Gallo(tamano: 60, gesto: Gesto.cantando),
+        ),
+      ],
     );
   }
 }
