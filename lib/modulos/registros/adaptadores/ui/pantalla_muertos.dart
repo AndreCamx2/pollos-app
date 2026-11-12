@@ -166,7 +166,10 @@ class _PantallaMuertosState extends ConsumerState<PantallaMuertos>
         const SizedBox(height: e16),
         const EtiquetaCampo('Causa', opcional: true),
         FichasOpcion<CausaMuerte>(
-          opciones: CausaMuerte.values,
+          opciones: [
+            for (final causa in CausaMuerte.values)
+              if (causa != CausaMuerte.faltante || _causa == CausaMuerte.faltante) causa,
+          ],
           elegida: _causa,
           etiqueta: (causa) => causa.etiqueta,
           alElegir: (causa) => setState(() => _causa = causa == _causa ? null : causa),

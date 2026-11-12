@@ -99,10 +99,10 @@ class _PantallaFormularioLoteState extends ConsumerState<PantallaFormularioLote>
     if (original != null) {
       final cuentas = _cuentas(original);
       final primero = cuentas.primerRegistro;
-      if (pollitos < cuentas.muertos + cuentas.vendidos) {
+      if (pollitos < cuentas.salieron) {
         mostrarError(
-          'Ya salieron ${miles(cuentas.muertos + cuentas.vendidos)} '
-          'pollos de este lote entre muertos y vendidos.',
+          'Ya salieron ${miles(cuentas.salieron)} '
+          'pollos de este lote entre muertos, faltantes y vendidos.',
           'pollitos',
         );
         return;

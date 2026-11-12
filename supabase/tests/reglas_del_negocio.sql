@@ -269,6 +269,14 @@ select pruebas.debe_fallar(
                     current_date + 5, 1)$s$, :'granja'),
   'fecha del celular');
 
+-- Los pollos que no aparecen al cerrar se anotan como faltantes. El lote de
+-- prueba ya está cerrado, así que se revisa la regla misma.
+select pruebas.igual(
+  (select count(*) from pg_constraint
+   where conname = 'mortalidad_causa_check'
+     and pg_get_constraintdef(oid) like '%faltante%'),
+  1, 'faltante es una causa aceptada');
+
 -- Carla, de otra granja, no ve ni toca nada de Ana.
 reset role;
 select set_config('request.jwt.claims', :carla, true);
