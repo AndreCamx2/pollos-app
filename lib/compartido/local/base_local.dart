@@ -33,6 +33,16 @@ const columnasLocales = {
     'cerrado_en',
     ...columnasDeAutoria,
   ],
+  'clientes': [
+    'id',
+    'granja_id',
+    'nombre',
+    'detalle',
+    'telefono',
+    'precio_libra_sugerido',
+    'recurrente',
+    ...columnasDeAutoria,
+  ],
   'compras_alimento': [
     'id',
     'granja_id',
@@ -65,7 +75,45 @@ const columnasLocales = {
     'nota',
     ...columnasDeAutoria,
   ],
+  'ventas': [
+    'id',
+    'granja_id',
+    'lote_id',
+    'cliente_id',
+    'fecha',
+    'pollos',
+    'libras',
+    'precio_libra',
+    'total',
+    'fiado',
+    ...columnasDeAutoria,
+  ],
+  'abonos': [
+    'id',
+    'granja_id',
+    'cliente_id',
+    'fecha',
+    'valor',
+    'recibido_por',
+    ...columnasDeAutoria,
+  ],
 };
+
+/// SQLite no tiene sí/no: en el celular estas columnas van como 1 y 0, y en
+/// Supabase como true y false.
+const columnasSiNo = {'fiado', 'recurrente'};
+
+/// Una fila del celular como la espera Supabase.
+Map<String, Object?> filaParaServidor(Map<String, Object?> fila) => {
+      for (final MapEntry(key: columna, value: valor) in fila.entries)
+        columna: columnasSiNo.contains(columna) && valor is int ? valor == 1 : valor,
+    };
+
+/// Una fila de Supabase como la guarda el celular.
+Map<String, Object?> filaParaCelular(Map<String, Object?> fila) => {
+      for (final MapEntry(key: columna, value: valor) in fila.entries)
+        columna: valor is bool ? (valor ? 1 : 0) : valor,
+    };
 
 enum Operacion { guardar, borrar }
 
@@ -93,7 +141,7 @@ class BaseLocal {
   static Future<BaseLocal> abrir() async => BaseLocal(
         await openDatabase(
           'pollos.db',
-          version: 2,
+          version: 3,
           onCreate: crearTablas,
           onUpgrade: actualizarTablas,
         ),
@@ -347,7 +395,9 @@ class BaseLocal {
   ) =>
       tx.insert(
         tabla,
-        {for (final columna in columnasLocales[tabla]!) columna: fila[columna]},
+        filaParaCelular({
+          for (final columna in columnasLocales[tabla]!) columna: fila[columna],
+        }),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
 
