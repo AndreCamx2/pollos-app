@@ -15,6 +15,7 @@ import '../modulos/lotes/dominio/lote.dart';
 import '../modulos/lotes/puertos/repositorio_lotes.dart';
 import '../modulos/registros/adaptadores/local/repositorio_registros_local.dart';
 import '../modulos/registros/dominio/cuentas_lote.dart';
+import '../modulos/registros/dominio/marca.dart';
 import '../modulos/registros/dominio/registro.dart';
 
 final supabaseProvider = Provider((ref) => Supabase.instance.client);
@@ -279,12 +280,14 @@ final cuentasClientesProvider = FutureProvider<List<CuentaCliente>>((ref) async 
 /// [ventas] vienen de la más reciente a la más antigua.
 CuentaCliente _cuenta(Cliente cliente, List<Venta> ventas, List<Abono> abonos) {
   final suyas = [for (final v in ventas) if (v.clienteId == cliente.id) v];
+  final fiadas = [for (final v in suyas) if (v.fiado) v];
   return CuentaCliente(
     cliente: cliente,
-    totalFiado: suyas.fold(0, (suma, venta) => suma + venta.fiadoPorCobrar),
+    totalFiado: fiadas.fold(0, (suma, venta) => suma + venta.total),
     abonos: [for (final a in abonos) if (a.clienteId == cliente.id) a],
     ventas: suyas.length,
     ultimoPrecio: suyas.firstOrNull?.precioLibra,
+    primeraFiada: fiadas.lastOrNull?.fecha,
   );
 }
 
@@ -296,3 +299,28 @@ final cuentaClienteProvider = Provider.family<CuentaCliente?, String>(
       .where((cuenta) => cuenta.cliente.id == clienteId)
       .firstOrNull,
 );
+
+/// Las marcas de alimento de la granja, las que se usan primero.
+final marcasProvider = FutureProvider<List<MarcaConCompras>>((ref) async {
+  ref.watch(cambiosLocalesProvider);
+  final granja = ref.watch(granjaActualProvider);
+  if (granja == null) return const [];
+  final compras = [
+    for (final registro in await ref.watch(registrosProvider.future))
+      if (registro is CompraAlimento) registro,
+  ];
+  return marcasConCompras(
+    await ref.watch(repositorioRegistrosProvider).marcas(granja.id),
+    compras,
+  );
+});
+
+/// El nombre con que se muestra la marca de una compra: el de la lista si la
+/// compra ya está amarrada a una marca, o el que se escribió al comprar.
+final nombreDeMarcaProvider = Provider<String Function(CompraAlimento)>((ref) {
+  final nombres = {
+    for (final m in ref.watch(marcasProvider).asData?.value ?? const <MarcaConCompras>[])
+      m.marca.id: m.marca.nombre,
+  };
+  return (compra) => nombres[compra.marcaId] ?? compra.marca;
+});

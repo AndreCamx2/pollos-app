@@ -1,13 +1,17 @@
 // DOMINIO: los clientes, lo que abonan y cuánto deben, en Dart puro.
 
+import '../../../compartido/cifras.dart';
 import '../../../compartido/fechas.dart';
 import '../../../compartido/formato.dart';
 
 /// Error cuando un dato del cliente o del abono rompe una regla del negocio.
 class ClienteInvalido implements Exception {
-  const ClienteInvalido(this.mensaje);
+  const ClienteInvalido(this.mensaje, {this.campo});
 
   final String mensaje;
+
+  /// El campo del formulario donde está el error, para señalarlo ahí.
+  final String? campo;
 
   @override
   String toString() => 'ClienteInvalido: $mensaje';
@@ -42,17 +46,32 @@ class Cliente {
   }) {
     final limpio = _sinVacio(nombre);
     if (limpio == null) {
-      throw const ClienteInvalido('Escribe el nombre del cliente.');
+      throw const ClienteInvalido('Escribe el nombre del cliente.', campo: 'nombre');
     }
     if (precioLibraSugerido != null && precioLibraSugerido <= 0) {
-      throw const ClienteInvalido('El precio por libra debe ser mayor que cero.');
+      throw const ClienteInvalido('El precio por libra debe ser mayor que cero.', campo: 'precio');
+    }
+    if (precioLibraSugerido != null && precioLibraSugerido > Topes.precioLibra) {
+      throw const ClienteInvalido(
+        'Más de \$100.000 la libra no parece correcto. Revisa la cifra.',
+        campo: 'precio',
+      );
+    }
+    final digitos = telefono?.replaceAll(RegExp(r'\D'), '') ?? '';
+    if (digitos.isNotEmpty && (digitos.length != 10 || !digitos.startsWith('3'))) {
+      throw const ClienteInvalido(
+        'El celular debe tener 10 números y empezar por 3.',
+        campo: 'telefono',
+      );
     }
     return Cliente.reconstruir(
       id: id,
       granjaId: granjaId,
       nombre: limpio,
       detalle: _sinVacio(detalle),
-      telefono: _sinVacio(telefono),
+      telefono: digitos.isEmpty
+          ? null
+          : '${digitos.substring(0, 3)} ${digitos.substring(3, 6)} ${digitos.substring(6)}',
       precioLibraSugerido: precioLibraSugerido,
       recurrente: recurrente,
     );
@@ -106,19 +125,28 @@ class Abono {
     required int valor,
     String? recibidoPor,
     required int debeSinEste,
+    DateTime? primeraVentaFiada,
     required DateTime hoy,
   }) {
     if (valor <= 0) {
-      throw const ClienteInvalido('Escribe cuánto pagó.');
+      throw const ClienteInvalido('Escribe cuánto pagó.', campo: 'valor');
     }
     if (soloFecha(fecha).isAfter(soloFecha(hoy))) {
-      throw const ClienteInvalido('La fecha no puede ser en el futuro.');
+      throw const ClienteInvalido('La fecha no puede ser en el futuro.', campo: 'fecha');
+    }
+    if (primeraVentaFiada != null && soloFecha(fecha).isBefore(soloFecha(primeraVentaFiada))) {
+      throw ClienteInvalido(
+        'La primera venta fiada a ${cliente.nombre} fue el ${fechaCorta(primeraVentaFiada)}: '
+        'el abono no puede ser de antes.',
+        campo: 'fecha',
+      );
     }
     if (valor > debeSinEste) {
       throw ClienteInvalido(
         debeSinEste <= 0
             ? '${cliente.nombre} no debe nada.'
             : '${cliente.nombre} solo debe ${plata(debeSinEste)}. Revisa el valor.',
+        campo: 'valor',
       );
     }
     return Abono.reconstruir(
@@ -155,6 +183,7 @@ class CuentaCliente {
     required this.abonos,
     required this.ventas,
     this.ultimoPrecio,
+    this.primeraFiada,
   });
 
   final Cliente cliente;
@@ -164,6 +193,9 @@ class CuentaCliente {
   /// Cuántas ventas tiene, fiadas o de contado.
   final int ventas;
   final int? ultimoPrecio;
+
+  /// La fecha de su primera venta fiada: ningún abono puede ser de antes.
+  final DateTime? primeraFiada;
 
   int get abonado => abonos.fold(0, (suma, abono) => suma + abono.valor);
 

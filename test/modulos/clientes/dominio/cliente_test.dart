@@ -48,6 +48,18 @@ void main() {
       expect(cliente.recurrente, isTrue);
     });
 
+    test('el celular, si se escribe, tiene 10 números y empieza por 3', () {
+      Cliente conCelular(String telefono) =>
+          Cliente.nuevo(id: 'c1', granjaId: 'granja-1', nombre: 'Pedro', telefono: telefono);
+      expect(conCelular('3001234567').telefono, '300 123 4567');
+      expect(conCelular('').telefono, isNull);
+      expect(
+        () => conCelular('300 123'),
+        throwsA(isA<ClienteInvalido>().having((e) => e.campo, 'campo', 'telefono')),
+      );
+      expect(() => conCelular('6012345678'), throwsA(isA<ClienteInvalido>()));
+    });
+
     test('rechaza un cliente sin nombre o con precio en cero', () {
       expect(
         () => Cliente.nuevo(id: 'c1', granjaId: 'granja-1', nombre: ' '),
@@ -85,6 +97,21 @@ void main() {
 
     test('no deja abonar a quien no debe nada', () {
       expect(() => abono(1000, debe: 0), throwsA(isA<ClienteInvalido>()));
+    });
+
+    test('no deja un abono de antes de la primera venta fiada', () {
+      expect(
+        () => Abono.nuevo(
+          id: 'a1',
+          cliente: marta,
+          fecha: DateTime(2026, 10, 1),
+          valor: 1000,
+          debeSinEste: 539800,
+          primeraVentaFiada: DateTime(2026, 10, 3),
+          hoy: hoy,
+        ),
+        throwsA(isA<ClienteInvalido>().having((e) => e.campo, 'campo', 'fecha')),
+      );
     });
 
     test('rechaza un abono en cero', () {

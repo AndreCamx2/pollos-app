@@ -43,6 +43,14 @@ const columnasLocales = {
     'recurrente',
     ...columnasDeAutoria,
   ],
+  'marcas': [
+    'id',
+    'granja_id',
+    'nombre',
+    'kilos_por_bulto',
+    'en_uso',
+    ...columnasDeAutoria,
+  ],
   'compras_alimento': [
     'id',
     'granja_id',
@@ -50,6 +58,7 @@ const columnasLocales = {
     'fecha',
     'tipo',
     'marca',
+    'marca_id',
     'kilos_por_bulto',
     'bultos',
     'precio_por_bulto',
@@ -101,7 +110,7 @@ const columnasLocales = {
 
 /// SQLite no tiene sí/no: en el celular estas columnas van como 1 y 0, y en
 /// Supabase como true y false.
-const columnasSiNo = {'fiado', 'recurrente'};
+const columnasSiNo = {'fiado', 'recurrente', 'en_uso'};
 
 /// Una fila del celular como la espera Supabase.
 Map<String, Object?> filaParaServidor(Map<String, Object?> fila) => {
@@ -141,7 +150,7 @@ class BaseLocal {
   static Future<BaseLocal> abrir() async => BaseLocal(
         await openDatabase(
           'pollos.db',
-          version: 3,
+          version: 4,
           onCreate: crearTablas,
           onUpgrade: actualizarTablas,
         ),
@@ -178,6 +187,15 @@ class BaseLocal {
     // La cola de la versión 1 no guardaba la fila de cada cambio. Solo
     // existió en celulares de prueba, así que se arma de nuevo.
     if (anterior < 2) await db.execute('drop table if exists pendientes');
+    // En la versión 1 no existía la tabla de compras: la crea crearTablas.
+    if (anterior >= 2 && anterior < 4) {
+      // El servidor llenó marca_id en las compras viejas: se vuelven a bajar
+      // todas para que el celular también lo tenga.
+      await db.execute('alter table compras_alimento add column marca_id');
+      await db.execute(
+        "delete from datos_guardados where clave like 'bajado:%:compras_alimento'",
+      );
+    }
     await crearTablas(db, nueva);
   }
 

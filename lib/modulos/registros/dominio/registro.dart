@@ -1,9 +1,11 @@
 // DOMINIO: lo que se anota en un lote día a día, en Dart puro.
 
+import '../../../compartido/cifras.dart';
 import '../../../compartido/fechas.dart';
 import '../../../compartido/formato.dart';
 import '../../clientes/dominio/cliente.dart';
 import '../../lotes/dominio/lote.dart';
+import 'marca.dart';
 
 enum TipoAlimento {
   inicio('Inicio'),
@@ -28,9 +30,12 @@ enum CausaMuerte {
 
 /// Error cuando un dato del registro rompe una regla del negocio.
 class RegistroInvalido implements Exception {
-  const RegistroInvalido(this.mensaje);
+  const RegistroInvalido(this.mensaje, {this.campo});
 
   final String mensaje;
+
+  /// El campo del formulario donde está el error, para señalarlo ahí.
+  final String? campo;
 
   @override
   String toString() => 'RegistroInvalido: $mensaje';
@@ -74,10 +79,11 @@ void _revisarLoteYFecha(Lote lote, DateTime fecha, DateTime hoy) {
   if (soloFecha(fecha).isBefore(lote.fechaLlegada)) {
     throw RegistroInvalido(
       'La fecha no puede ser anterior a la llegada del lote (${fechaCorta(lote.fechaLlegada)}).',
+      campo: 'fecha',
     );
   }
   if (soloFecha(fecha).isAfter(soloFecha(hoy))) {
-    throw const RegistroInvalido('La fecha no puede ser en el futuro.');
+    throw const RegistroInvalido('La fecha no puede ser en el futuro.', campo: 'fecha');
   }
 }
 
@@ -94,6 +100,7 @@ final class CompraAlimento extends Registro {
     required super.fecha,
     required this.tipo,
     required this.marca,
+    this.marcaId,
     required this.kilosPorBulto,
     required this.bultos,
     required this.precioPorBulto,
@@ -106,25 +113,39 @@ final class CompraAlimento extends Registro {
     required Lote lote,
     required DateTime fecha,
     required TipoAlimento tipo,
-    required String marca,
+    required Marca? marca,
     required double kilosPorBulto,
     required int bultos,
     required int precioPorBulto,
     required DateTime hoy,
   }) {
     _revisarLoteYFecha(lote, fecha, hoy);
-    final nombre = _sinVacio(marca);
-    if (nombre == null) {
-      throw const RegistroInvalido('Escribe la marca del alimento.');
+    if (marca == null) {
+      throw const RegistroInvalido('Elige la marca del alimento.', campo: 'marca');
     }
     if (bultos <= 0) {
-      throw const RegistroInvalido('Los bultos deben ser más de cero.');
+      throw const RegistroInvalido('Los bultos deben ser más de cero.', campo: 'bultos');
     }
-    if (kilosPorBulto <= 0) {
-      throw const RegistroInvalido('Los kilos por bulto deben ser más de cero.');
+    if (bultos > Topes.bultos) {
+      throw const RegistroInvalido(
+        'Más de 1.000 bultos en una compra no parece correcto. Revisa la cifra.',
+        campo: 'bultos',
+      );
+    }
+    if (kilosPorBulto <= 0 || kilosPorBulto > Topes.kilosPorBulto) {
+      throw const RegistroInvalido(
+        'Los kilos por bulto deben estar entre 1 y 100.',
+        campo: 'kilos',
+      );
     }
     if (precioPorBulto < 0) {
-      throw const RegistroInvalido('El precio no puede ser negativo.');
+      throw const RegistroInvalido('El precio no puede ser negativo.', campo: 'precio');
+    }
+    if (precioPorBulto > Topes.precioBulto) {
+      throw const RegistroInvalido(
+        'Más de \$2.000.000 por bulto no parece correcto. Revisa la cifra.',
+        campo: 'precio',
+      );
     }
     return CompraAlimento.reconstruir(
       id: id,
@@ -132,7 +153,8 @@ final class CompraAlimento extends Registro {
       loteId: lote.id,
       fecha: fecha,
       tipo: tipo,
-      marca: nombre,
+      marca: marca.nombre,
+      marcaId: marca.id,
       kilosPorBulto: kilosPorBulto,
       bultos: bultos,
       precioPorBulto: precioPorBulto,
@@ -140,7 +162,13 @@ final class CompraAlimento extends Registro {
   }
 
   final TipoAlimento tipo;
+
+  /// El nombre que tenía la marca al comprarse. Para mostrarla se busca por
+  /// [marcaId], que trae el nombre corregido si se cambió después.
   final String marca;
+
+  /// Null en compras anotadas antes de que existiera la lista de marcas.
+  final String? marcaId;
   final double kilosPorBulto;
   final int bultos;
 
@@ -179,10 +207,13 @@ final class Mortalidad extends Registro {
   }) {
     _revisarLoteYFecha(lote, fecha, hoy);
     if (cantidad <= 0) {
-      throw const RegistroInvalido('Escribe cuántos se murieron.');
+      throw const RegistroInvalido('Escribe cuántos se murieron.', campo: 'cantidad');
     }
     if (cantidad > vivosSinEste) {
-      throw RegistroInvalido('Solo quedan $vivosSinEste pollos vivos en este lote.');
+      throw RegistroInvalido(
+        'Solo quedan $vivosSinEste pollos vivos en este lote.',
+        campo: 'cantidad',
+      );
     }
     return Mortalidad.reconstruir(
       id: id,
@@ -225,10 +256,13 @@ final class Medicamento extends Registro {
     _revisarLoteYFecha(lote, fecha, hoy);
     final limpio = _sinVacio(nombre);
     if (limpio == null) {
-      throw const RegistroInvalido('Escribe qué medicina se compró.');
+      throw const RegistroInvalido('Escribe qué medicina se compró.', campo: 'nombre');
     }
     if (costo < 0) {
-      throw const RegistroInvalido('El costo no puede ser negativo.');
+      throw const RegistroInvalido('El costo no puede ser negativo.', campo: 'costo');
+    }
+    if (costo > Topes.plata) {
+      throw const RegistroInvalido('Ese costo es demasiado alto. Revisa la cifra.', campo: 'costo');
     }
     return Medicamento.reconstruir(
       id: id,
@@ -286,16 +320,31 @@ final class Venta extends Registro {
   }) {
     _revisarLoteYFecha(lote, fecha, hoy);
     if (pollos <= 0) {
-      throw const RegistroInvalido('Escribe cuántos pollos se vendieron.');
+      throw const RegistroInvalido('Escribe cuántos pollos se vendieron.', campo: 'pollos');
     }
     if (pollos > vivosSinEsta) {
-      throw RegistroInvalido('Solo quedan $vivosSinEsta pollos vivos en este lote.');
+      throw RegistroInvalido(
+        'Solo quedan $vivosSinEsta pollos vivos en este lote.',
+        campo: 'pollos',
+      );
     }
     if (libras <= 0) {
-      throw const RegistroInvalido('Escribe cuántas libras pesaron.');
+      throw const RegistroInvalido('Escribe cuántas libras pesaron.', campo: 'libras');
+    }
+    if (libras > Topes.libras) {
+      throw const RegistroInvalido(
+        'Más de 99.999 libras en una venta no parece correcto. Revisa la cifra.',
+        campo: 'libras',
+      );
     }
     if (precioLibra <= 0) {
-      throw const RegistroInvalido('Escribe el precio de la libra.');
+      throw const RegistroInvalido('Escribe el precio de la libra.', campo: 'precio');
+    }
+    if (precioLibra > Topes.precioLibra) {
+      throw const RegistroInvalido(
+        'Más de \$100.000 la libra no parece correcto. Revisa la cifra.',
+        campo: 'precio',
+      );
     }
     final venta = Venta.reconstruir(
       id: id,

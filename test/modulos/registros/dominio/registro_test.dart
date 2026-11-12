@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pollos_app/modulos/clientes/dominio/cliente.dart';
 import 'package:pollos_app/modulos/lotes/dominio/lote.dart';
 import 'package:pollos_app/modulos/registros/dominio/cuentas_lote.dart';
+import 'package:pollos_app/modulos/registros/dominio/marca.dart';
 import 'package:pollos_app/modulos/registros/dominio/registro.dart';
 
 void main() {
@@ -26,13 +27,15 @@ void main() {
         hoy: hoy,
       );
 
+  const solla = Marca.reconstruir(id: 'solla', granjaId: 'granja-1', nombre: 'Solla');
+
   CompraAlimento compra(TipoAlimento tipo, {int bultos = 10, int precio = 98000}) =>
       CompraAlimento.nueva(
         id: 'c-$tipo',
         lote: lote,
         fecha: DateTime(2026, 10, 5),
         tipo: tipo,
-        marca: ' Marca A ',
+        marca: solla,
         kilosPorBulto: 40,
         bultos: bultos,
         precioPorBulto: precio,
@@ -111,7 +114,8 @@ void main() {
       final registro = compra(TipoAlimento.inicio);
       expect(registro.total, 980000);
       expect(registro.kilos, 400);
-      expect(registro.marca, 'Marca A');
+      expect(registro.marca, 'Solla');
+      expect(registro.marcaId, 'solla');
     });
 
     test('rechaza una compra sin marca o sin bultos', () {
@@ -121,7 +125,7 @@ void main() {
           lote: lote,
           fecha: hoy,
           tipo: TipoAlimento.inicio,
-          marca: '  ',
+          marca: null,
           kilosPorBulto: 40,
           bultos: 10,
           precioPorBulto: 98000,
@@ -213,6 +217,79 @@ void main() {
       expect(venta().pesoRaro, isFalse);
       expect(venta(libras: 15).pesoRaro, isTrue);
       expect(venta(libras: 90).pesoRaro, isTrue);
+    });
+  });
+
+  group('Topes contra errores de dedo', () {
+    test('no acepta 5.000 bultos en una compra', () {
+      expect(
+        () => compra(TipoAlimento.inicio, bultos: 5000),
+        throwsA(isA<RegistroInvalido>().having((e) => e.campo, 'campo', 'bultos')),
+      );
+    });
+
+    test('no acepta \$9.800.000 por bulto', () {
+      expect(
+        () => compra(TipoAlimento.inicio, precio: 9800000),
+        throwsA(isA<RegistroInvalido>().having((e) => e.campo, 'campo', 'precio')),
+      );
+    });
+
+    test('no acepta más de 100.000 pollitos en un lote', () {
+      expect(
+        () => Lote.nuevo(
+          id: 'l2',
+          granjaId: 'granja-1',
+          galponId: 'galpon-1',
+          fechaLlegada: hoy,
+          cantidadInicial: 500000,
+          precioCompraTotal: 1750000,
+          hoy: hoy,
+        ),
+        throwsA(isA<LoteInvalido>().having((e) => e.campo, 'campo', 'pollitos')),
+      );
+    });
+
+    test('el error dice en qué campo está', () {
+      expect(
+        () => muertos(1, fecha: DateTime(2026, 9, 16)),
+        throwsA(isA<RegistroInvalido>().having((e) => e.campo, 'campo', 'fecha')),
+      );
+    });
+  });
+
+  group('Marcas', () {
+    test('no deja dos marcas con el mismo nombre', () {
+      expect(
+        () => Marca.nueva(id: 'otra', granjaId: 'granja-1', nombre: ' SOLLA ', otras: [solla]),
+        throwsA(isA<RegistroInvalido>()),
+      );
+    });
+
+    test('al corregir una marca puede conservar su nombre', () {
+      final corregida = Marca.nueva(
+        id: 'solla',
+        granjaId: 'granja-1',
+        nombre: 'Solla',
+        kilosPorBulto: 40,
+        otras: [solla],
+      );
+      expect(corregida.kilosPorBulto, 40);
+    });
+
+    test('rechaza kilos por bulto fuera de 1 a 100', () {
+      expect(
+        () => Marca.nueva(id: 'x', granjaId: 'granja-1', nombre: 'Italcol', kilosPorBulto: 400, otras: const []),
+        throwsA(isA<RegistroInvalido>()),
+      );
+    });
+
+    test('las que ya no se usan van al final', () {
+      const vieja = Marca.reconstruir(id: 'a', granjaId: 'granja-1', nombre: 'Agrinal', enUso: false);
+      final lista = marcasConCompras([vieja, solla], [compra(TipoAlimento.inicio)]);
+      expect([for (final m in lista) m.marca.id], ['solla', 'a']);
+      expect(lista.first.compras, 1);
+      expect(lista.first.ultimoPrecio, 98000);
     });
   });
 
