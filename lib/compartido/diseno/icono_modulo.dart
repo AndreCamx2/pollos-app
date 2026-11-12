@@ -47,7 +47,8 @@ class _Trazo extends CustomPainter {
     final trazo = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
+      // Firme, para que pese como el contorno del gallo.
+      ..strokeWidth = 2.6
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
     // Las figuras se dibujan en una cuadrícula de 24 y ocupan la mitad del cuadro.
