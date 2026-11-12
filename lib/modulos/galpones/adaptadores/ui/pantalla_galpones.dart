@@ -15,6 +15,7 @@ import '../../../../compartido/diseno/pulsable.dart';
 import '../../../../compartido/diseno/tarjeta_ticket.dart';
 import '../../../../compartido/diseno/tema.dart';
 import '../../../../compartido/formato.dart';
+import '../../../clientes/dominio/cliente.dart';
 import '../../../granja/adaptadores/ui/selector_granja.dart';
 import '../../../lotes/dominio/lote.dart';
 
