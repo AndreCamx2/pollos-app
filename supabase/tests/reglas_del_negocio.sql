@@ -249,6 +249,11 @@ select pruebas.debe_fallar(
             values ('lotes', gen_random_uuid(), %L)$s$, :'granja'),
   'row-level security');
 
+select pruebas.igual(
+  (select count(*) from public.clientes
+   where id = '30000000-0000-0000-0000-000000000001' and recurrente),
+  1, 'un cliente nuevo cuenta como recurrente');
+
 -- Carla, de otra granja, no ve ni toca nada de Ana.
 reset role;
 select set_config('request.jwt.claims', :carla, true);
