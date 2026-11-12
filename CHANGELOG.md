@@ -11,6 +11,13 @@ Cada versión corresponde a una parte del proyecto. El número de la derecha del
 - La primera vez, la contraseña nueva se escribe dos veces, las dos con el
   ojo para verla, y la lista de requisitos se marca mientras se escribe.
 - El gallo es el ícono de la app en el celular.
+- El gallo acompaña la app: firma el encabezado, canta mientras carga y sobre
+  un lote con ganancia, duerme en las pantallas vacías y pone cara de duda en
+  los errores. La app abre en el maíz con el gallo, sin el instante en blanco.
+- Iconos con el trazo más firme, listas desplegables en blanco con la flecha en
+  un círculo, Personas con el encabezado de la granja y la pantalla sin granja
+  con el del gallo.
+- El resumen que se comparte termina con "Hecho con Mis pollos".
 - El dueño cambia el rol de cada persona o la saca de la granja, y cualquiera
   puede salirse. Siempre queda al menos un dueño.
 - La app recuerda la última granja elegida.
