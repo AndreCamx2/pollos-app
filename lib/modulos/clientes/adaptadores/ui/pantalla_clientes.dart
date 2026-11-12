@@ -4,10 +4,12 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/aviso_sincronizacion.dart';
 import '../../../../app/proveedores.dart';
+import '../../../../app/sincronizacion.dart';
 import '../../../../compartido/diseno/colores.dart';
 import '../../../../compartido/diseno/encabezado_maiz.dart';
 import '../../../../compartido/diseno/espacios.dart';
 import '../../../../compartido/diseno/estado_error.dart';
+import '../../../../compartido/diseno/hoja_confirmar.dart';
 import '../../../../compartido/diseno/pulsable.dart';
 import '../../../../compartido/diseno/tarjeta_ticket.dart';
 import '../../../../compartido/diseno/tema.dart';
@@ -333,15 +335,76 @@ class _DetalleCliente extends ConsumerWidget {
             ),
           ],
           if (puedeCorregir)
-            Center(
-              child: TextButton(
-                onPressed: () => context.push('/clientes/${cliente.id}/editar'),
-                child: const Text('Corregir cliente'),
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TextButton(
+                  onPressed: () => context.push('/clientes/${cliente.id}/editar'),
+                  child: const Text('Corregir'),
+                ),
+                const SizedBox(width: e8),
+                TextButton(
+                  onPressed: () => _borrar(context, ref),
+                  child: const Text('Borrar'),
+                ),
+              ],
             ),
         ],
       ),
     );
+  }
+}
+
+extension on _DetalleCliente {
+  /// Un cliente con ventas o abonos no se borra: se ofrece mandarlo al final
+  /// de la lista como no recurrente.
+  Future<void> _borrar(BuildContext context, WidgetRef ref) async {
+    final cliente = cuenta.cliente;
+    final repositorio = ref.read(repositorioClientesProvider);
+    if (cuenta.sePuedeBorrar) {
+      final acepto = await confirmar(
+        context,
+        titulo: '¿Borrar a ${cliente.nombre}?',
+        detalle: 'Desaparece de la lista para todos en la granja. No se puede deshacer.',
+        accion: 'Borrar cliente',
+      );
+      if (!acepto) return;
+      await repositorio.borrarCliente(cliente);
+    } else {
+      final detalle = cuenta.alDia
+          ? 'Tiene ventas o abonos anotados y se perderían sus cuentas.'
+          : 'Todavía debe ${plata(cuenta.debe)} y tiene ventas anotadas.';
+      if (!cliente.recurrente) {
+        await confirmar(
+          context,
+          titulo: 'No se puede borrar a ${cliente.nombre}',
+          detalle: '$detalle Ya está al final de la lista como no recurrente.',
+          accion: 'Entendido',
+        );
+        return;
+      }
+      final acepto = await confirmar(
+        context,
+        titulo: 'No se puede borrar a ${cliente.nombre}',
+        detalle: '$detalle Si ya no te compra, márcalo como no recurrente y pasa al '
+            'final de la lista.',
+        accion: 'Marcar como no recurrente',
+      );
+      if (!acepto) return;
+      await repositorio.guardarCliente(
+        Cliente.reconstruir(
+          id: cliente.id,
+          granjaId: cliente.granjaId,
+          nombre: cliente.nombre,
+          detalle: cliente.detalle,
+          telefono: cliente.telefono,
+          precioLibraSugerido: cliente.precioLibraSugerido,
+          recurrente: false,
+          creadoPor: cliente.creadoPor,
+        ),
+      );
+    }
+    await ref.read(sincronizacionProvider.notifier).huboCambios();
   }
 }
 
