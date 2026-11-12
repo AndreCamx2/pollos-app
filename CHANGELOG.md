@@ -3,6 +3,11 @@
 Cada versión corresponde a una parte del proyecto. El número de la derecha del
 `+` en `pubspec.yaml` sube con cada APK que se instala.
 
+## 0.5.2 · Arreglo
+
+- La 0.5.1 no compilaba: la lista de formatos de los campos de cantidades
+  estaba marcada como constante sin poder serlo.
+
 ## 0.5.1 · Marcas de alimento y validaciones
 
 - Marcas de alimento como lista propia: se eligen en un menú desplegable al
