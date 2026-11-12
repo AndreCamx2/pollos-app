@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import 'colores.dart';
 
-enum Figura { galpon, bulto, muerto, capsula }
+enum Figura { galpon, bulto, muerto, capsula, balanza, personas }
 
 /// El dibujo de cada cosa de la granja dentro de un cuadro de esquinas
 /// suaves. El color del cuadro dice de qué se trata.
@@ -103,6 +103,38 @@ class _Trazo extends CustomPainter {
         );
         canvas.restore();
         canvas.drawLine(const Offset(9.2, 9.2), const Offset(14.8, 14.8), trazo);
+      case Figura.balanza:
+        canvas.drawPath(
+          Path()
+            ..moveTo(12, 4)
+            ..lineTo(12, 20)
+            ..moveTo(8, 20)
+            ..lineTo(16, 20)
+            ..moveTo(5, 7)
+            ..lineTo(19, 7)
+            ..moveTo(5, 7)
+            ..lineTo(2, 13)
+            ..arcToPoint(const Offset(8, 13), radius: const Radius.circular(3), clockwise: false)
+            ..close()
+            ..moveTo(19, 7)
+            ..lineTo(16, 13)
+            ..arcToPoint(const Offset(22, 13), radius: const Radius.circular(3), clockwise: false)
+            ..close(),
+          trazo,
+        );
+      case Figura.personas:
+        canvas.drawCircle(const Offset(9, 8), 3.5, trazo);
+        canvas.drawPath(
+          Path()
+            ..moveTo(3, 20)
+            ..cubicTo(3, 16.5, 5.7, 14.5, 9, 14.5)
+            ..cubicTo(12.3, 14.5, 15, 16.5, 15, 20)
+            ..moveTo(16, 4.6)
+            ..arcToPoint(const Offset(16, 11.4), radius: const Radius.circular(3.5))
+            ..moveTo(18, 14.8)
+            ..cubicTo(19.9, 15.5, 21, 17.2, 21, 20),
+          trazo,
+        );
     }
   }
 
