@@ -254,6 +254,21 @@ select pruebas.igual(
    where id = '30000000-0000-0000-0000-000000000001' and recurrente),
   1, 'un cliente nuevo cuenta como recurrente');
 
+-- Marcas de alimento.
+insert into public.marcas (id, granja_id, nombre, kilos_por_bulto)
+values ('70000000-0000-0000-0000-000000000001', :'granja', 'Solla', 40);
+
+select pruebas.debe_fallar(
+  format($s$insert into public.marcas (id, granja_id, nombre)
+            values (gen_random_uuid(), %L, ' solla ')$s$, :'granja'),
+  'marcas_nombre_unico');
+
+select pruebas.debe_fallar(
+  format($s$insert into public.mortalidad (id, granja_id, lote_id, fecha, cantidad)
+            values (gen_random_uuid(), %L, '20000000-0000-0000-0000-000000000001',
+                    current_date + 5, 1)$s$, :'granja'),
+  'fecha del celular');
+
 -- Carla, de otra granja, no ve ni toca nada de Ana.
 reset role;
 select set_config('request.jwt.claims', :carla, true);
@@ -275,6 +290,7 @@ select pruebas.debe_fallar(
   'row-level security');
 
 select pruebas.igual((select count(*) from public.borrados), 0, 'otra granja no ve lo que borró Ana');
+select pruebas.igual((select count(*) from public.marcas), 0, 'otra granja no ve las marcas de Ana');
 
 insert into public.galpones (id, granja_id, nombre)
 select '10000000-0000-0000-0000-000000000003', id, 'Galpón 1' from public.granjas;
