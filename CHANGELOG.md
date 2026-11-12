@@ -3,6 +3,22 @@
 Cada versión corresponde a una parte del proyecto. El número de la derecha del
 `+` en `pubspec.yaml` sube con cada APK que se instala.
 
+## 0.6.0 · Cierres
+
+- Al cerrar un lote, los pollos tienen que cuadrar: si en las cuentas quedan
+  vivos, la app pregunta si se murieron, si faltan (robados, perdidos o mal
+  contados) o si todavía hay pollos. Los faltantes se anotan aparte de la
+  mortalidad.
+- Cierre del lote: cuánto ganaste o perdiste, cómo fue el lote, la inversión
+  desglosada, indicadores (peso promedio, conversión alimenticia, costo y
+  ganancia por pollo), por qué se murieron y a quién le vendiste. Con
+  comparación contra tus otros lotes del año.
+- "Ver cómo va": el mismo reporte para un lote abierto.
+- Pestaña Cierres: lo ganado en el año, los últimos 6 meses o todo, con una
+  gráfica de ganancia por lote y la lista de lotes cerrados.
+- Compartir el resumen del lote por WhatsApp u otra app.
+- Base de datos: migración `20261113000000_faltantes.sql`.
+
 ## 0.5.2 · Arreglo
 
 - La 0.5.1 no compilaba: la lista de formatos de los campos de cantidades
