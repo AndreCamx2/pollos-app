@@ -111,14 +111,26 @@ final misGranjasProvider = FutureProvider<List<Granja>>((ref) async {
 
 // shortcut: la granja elegida se olvida al cerrar la app y se vuelve a la
 // primera; guardarla con shared_preferences si los dueños de varias lo piden.
+/// La granja que la persona eligió la última vez; queda guardada en el
+/// celular para abrir en esa.
 class GranjaElegida extends Notifier<String?> {
   @override
   String? build() {
-    ref.watch(usuarioIdProvider);
+    final id = ref.watch(usuarioIdProvider);
+    if (id != null) _leerLaGuardada(id);
     return null;
   }
 
-  void elegir(String granjaId) => state = granjaId;
+  Future<void> _leerLaGuardada(String usuarioId) async {
+    final guardada = await ref.read(baseLocalProvider).leerDato('granja:$usuarioId');
+    if (guardada is String && state == null) state = guardada;
+  }
+
+  void elegir(String granjaId) {
+    state = granjaId;
+    final id = ref.read(usuarioIdProvider);
+    if (id != null) ref.read(baseLocalProvider).guardarDato('granja:$id', granjaId);
+  }
 }
 
 final granjaElegidaProvider =
