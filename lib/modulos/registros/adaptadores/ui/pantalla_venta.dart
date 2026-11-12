@@ -422,6 +422,11 @@ class _MenuClientes extends StatelessWidget {
       hintText: 'Elige o escribe el nombre',
       textStyle: conPeso(textos.bodyLarge!, 700),
       menuHeight: 320,
+      // DropdownMenu no toma el estilo de los campos del tema y quedaba del
+      // color del fondo.
+      inputDecorationTheme: Theme.of(context).inputDecorationTheme,
+      trailingIcon: const FlechaDeLista(),
+      selectedTrailingIcon: const FlechaDeLista(abierta: true),
       menuStyle: const MenuStyle(
         backgroundColor: WidgetStatePropertyAll(ColoresGranja.papel),
         surfaceTintColor: WidgetStatePropertyAll(Colors.transparent),

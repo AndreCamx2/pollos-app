@@ -129,6 +129,31 @@ class _CampoGranjaState extends State<CampoGranja> {
   }
 }
 
+/// La flecha de las listas desplegables, en un círculo para que se note que
+/// el campo se abre y no es para escribir.
+class FlechaDeLista extends StatelessWidget {
+  const FlechaDeLista({super.key, this.abierta = false});
+
+  final bool abierta;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 34,
+      height: 34,
+      decoration: const BoxDecoration(
+        color: ColoresGranja.maizClaro,
+        shape: BoxShape.circle,
+      ),
+      child: Icon(
+        abierta ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+        color: ColoresGranja.maizOscuro,
+        size: 24,
+      ),
+    );
+  }
+}
+
 /// Va poniendo los puntos de miles mientras la persona escribe: 1750000 se
 /// ve como 1.750.000.
 class MilesAlEscribir extends TextInputFormatter {
