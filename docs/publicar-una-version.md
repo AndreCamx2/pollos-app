@@ -1,7 +1,8 @@
 # Publicar una versión
 
 Para la primera vez en producción, ver la sección "Pasar a producción" del
-`README.md`. Esto es lo de cada versión nueva.
+`README.md`. Esto es lo de cada versión nueva; el dibujo del recorrido está en
+[diagramas.md](diagramas.md#7-de-un-cambio-al-celular).
 
 1. Rama desde `main`. Los cambios van con su entrada en `CHANGELOG.md` y la
    versión nueva en `pubspec.yaml`: `X.Y.Z+N`, donde `N` siempre sube.

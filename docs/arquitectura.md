@@ -1,7 +1,8 @@
 # Arquitectura
 
 Cómo está armado el código de Mis pollos. Las reglas del negocio están en
-`supabase/README.md` (roles) y en el dominio de cada módulo.
+`supabase/README.md` (roles) y en el dominio de cada módulo. Los dibujos de
+todo esto están en [diagramas.md](diagramas.md).
 
 ## Capas por módulo
 
