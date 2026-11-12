@@ -4,11 +4,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/proveedores.dart';
 import '../../../../app/sincronizacion.dart';
+import '../../../../compartido/cifras.dart';
 import '../../../../compartido/diseno/campo.dart';
 import '../../../../compartido/diseno/colores.dart';
 import '../../../../compartido/diseno/encabezado_maiz.dart';
 import '../../../../compartido/diseno/espacios.dart';
 import '../../../../compartido/diseno/estado_error.dart';
+import '../../../../compartido/diseno/formulario.dart';
 import '../../../../compartido/diseno/hoja_confirmar.dart';
 import '../../../../compartido/diseno/pulsable.dart';
 import '../../../../compartido/diseno/selector_fecha.dart';
@@ -33,14 +35,17 @@ class PantallaFormularioLote extends ConsumerStatefulWidget {
       _PantallaFormularioLoteState();
 }
 
-class _PantallaFormularioLoteState extends ConsumerState<PantallaFormularioLote> {
+class _PantallaFormularioLoteState extends ConsumerState<PantallaFormularioLote>
+    with FormularioGranja {
   final _pollitos = TextEditingController();
   final _precio = TextEditingController();
   late DateTime _llegada;
   String? _galponId;
   Lote? _original;
   var _guardando = false;
-  String? _error;
+
+  @override
+  String get firma => [_galponId, _pollitos.text, _precio.text, fechaCorta(_llegada)].join('|');
 
   @override
   void initState() {
@@ -60,6 +65,7 @@ class _PantallaFormularioLoteState extends ConsumerState<PantallaFormularioLote>
     // El costo por pollito se calcula mientras la persona escribe.
     _pollitos.addListener(_redibujar);
     _precio.addListener(_redibujar);
+    recordarInicio();
   }
 
   void _redibujar() => setState(() {});
@@ -78,15 +84,15 @@ class _PantallaFormularioLoteState extends ConsumerState<PantallaFormularioLote>
     final precio = leerEntero(_precio.text);
     if (granja == null) return;
     if (galponId == null) {
-      setState(() => _error = 'Elige el galpón donde van a vivir.');
+      mostrarError('Elige el galpón donde van a vivir.', 'galpon');
       return;
     }
     if (pollitos == null || precio == null) {
-      setState(
-        () => _error = pollitos == null
-            ? 'Escribe cuántos pollitos llegaron.'
-            : 'Escribe cuánto pagaste por todos.',
-      );
+      if (pollitos == null) {
+        mostrarError('Escribe cuántos pollitos llegaron.', 'pollitos');
+      } else {
+        mostrarError('Escribe cuánto pagaste por todos.', 'precio');
+      }
       return;
     }
     final original = _original;
@@ -94,24 +100,26 @@ class _PantallaFormularioLoteState extends ConsumerState<PantallaFormularioLote>
       final cuentas = _cuentas(original);
       final primero = cuentas.primerRegistro;
       if (pollitos < cuentas.muertos + cuentas.vendidos) {
-        setState(
-          () => _error = 'Ya salieron ${miles(cuentas.muertos + cuentas.vendidos)} '
-              'pollos de este lote entre muertos y vendidos.',
+        mostrarError(
+          'Ya salieron ${miles(cuentas.muertos + cuentas.vendidos)} '
+          'pollos de este lote entre muertos y vendidos.',
+          'pollitos',
         );
         return;
       }
       if (primero != null &&
           DateTime.utc(_llegada.year, _llegada.month, _llegada.day).isAfter(primero)) {
-        setState(
-          () => _error = 'Hay registros desde el ${fechaCorta(primero)}: '
-              'los pollitos tuvieron que llegar antes.',
+        mostrarError(
+          'Hay registros desde el ${fechaCorta(primero)}: '
+          'los pollitos tuvieron que llegar antes.',
+          'fecha',
         );
         return;
       }
     }
     setState(() {
       _guardando = true;
-      _error = null;
+      limpiarError();
     });
     try {
       if (original == null) {
@@ -138,11 +146,16 @@ class _PantallaFormularioLoteState extends ConsumerState<PantallaFormularioLote>
       await ref.read(sincronizacionProvider.notifier).huboCambios();
       if (mounted) context.pop();
     } on LoteInvalido catch (e) {
-      setState(() => _error = e.mensaje);
+      mostrarError(e.mensaje, e.campo);
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
   }
+
+  int? _costoPorPollitoAnterior(Lote? original) => (ref.read(lotesProvider).asData?.value ?? const <Lote>[])
+      .where((lote) => lote.id != original?.id)
+      .firstOrNull
+      ?.costoPorPollito;
 
   CuentasLote _cuentas(Lote lote) =>
       CuentasLote(lote, ref.read(registrosProvider).asData?.value ?? const []);
@@ -169,7 +182,9 @@ class _PantallaFormularioLoteState extends ConsumerState<PantallaFormularioLote>
     final elegido = galpones.where((g) => g.galpon.id == _galponId).firstOrNull?.galpon;
     final caben = elegido?.capacidad;
 
-    return Scaffold(
+    return ProtegerCambios(
+      hayCambios: hayCambios,
+      child: Scaffold(
       body: ListView(
         padding: const EdgeInsets.only(bottom: e24),
         children: [
@@ -208,6 +223,10 @@ class _PantallaFormularioLoteState extends ConsumerState<PantallaFormularioLote>
                         ],
                       ),
                     ),
+                  if (errorDe('galpon') case final mensaje?) ...[
+                    const SizedBox(height: e8),
+                    AvisoError(mensaje),
+                  ],
                   Align(
                     alignment: Alignment.centerLeft,
                     child: TextButton(
@@ -220,6 +239,7 @@ class _PantallaFormularioLoteState extends ConsumerState<PantallaFormularioLote>
                 CampoGranja(
                   etiqueta: 'Pollitos que llegaron',
                   controller: _pollitos,
+                  error: errorDe('pollitos'),
                   pista: 'Ej.: 500',
                   teclado: TextInputType.number,
                   formatos: const [MilesAlEscribir()],
@@ -238,21 +258,36 @@ class _PantallaFormularioLoteState extends ConsumerState<PantallaFormularioLote>
                   fecha: _llegada,
                   alCambiar: (fecha) => setState(() => _llegada = fecha),
                 ),
+                if (errorDe('fecha') case final mensaje?) ...[
+                  const SizedBox(height: e8),
+                  AvisoError(mensaje),
+                ],
                 const SizedBox(height: e16),
                 CampoGranja(
                   etiqueta: 'Lo que pagaste por todos',
                   controller: _precio,
+                  error: errorDe('precio'),
                   pista: 'Ej.: 1.750.000',
                   teclado: TextInputType.number,
                   formatos: const [MilesAlEscribir()],
                 ),
+                if (pollitos != null && pollitos > 0)
+                  if (avisoCifraRara(
+                    ((leerEntero(_precio.text) ?? 0) / pollitos).round(),
+                    _costoPorPollitoAnterior(original),
+                    comparadoCon: 'lo que costó cada pollito en el lote anterior',
+                  )
+                      case final aviso?) ...[
+                    const SizedBox(height: e8),
+                    AvisoAtencion(aviso),
+                  ],
                 const SizedBox(height: e20),
                 _ResumenLote(
                   pollitos: pollitos,
                   precio: leerEntero(_precio.text),
                   llegada: _llegada,
                 ),
-                if (_error case final error?) ...[
+                if (errorGeneral case final error?) ...[
                   const SizedBox(height: e12),
                   AvisoError(error),
                 ],
@@ -275,6 +310,7 @@ class _PantallaFormularioLoteState extends ConsumerState<PantallaFormularioLote>
           ),
         ],
       ),
+    ),
     );
   }
 }

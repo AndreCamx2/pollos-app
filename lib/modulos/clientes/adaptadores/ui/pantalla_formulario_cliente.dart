@@ -10,6 +10,7 @@ import '../../../../compartido/diseno/colores.dart';
 import '../../../../compartido/diseno/encabezado_maiz.dart';
 import '../../../../compartido/diseno/espacios.dart';
 import '../../../../compartido/diseno/estado_error.dart';
+import '../../../../compartido/diseno/formulario.dart';
 import '../../../../compartido/diseno/hoja_confirmar.dart';
 import '../../../../compartido/diseno/pulsable.dart';
 import '../../../../compartido/diseno/tema.dart';
@@ -29,7 +30,8 @@ class PantallaFormularioCliente extends ConsumerStatefulWidget {
       _PantallaFormularioClienteState();
 }
 
-class _PantallaFormularioClienteState extends ConsumerState<PantallaFormularioCliente> {
+class _PantallaFormularioClienteState extends ConsumerState<PantallaFormularioCliente>
+    with FormularioGranja {
   final _nombre = TextEditingController();
   final _detalle = TextEditingController();
   final _telefono = TextEditingController();
@@ -37,7 +39,9 @@ class _PantallaFormularioClienteState extends ConsumerState<PantallaFormularioCl
   var _recurrente = true;
   CuentaCliente? _original;
   var _guardando = false;
-  String? _error;
+
+  @override
+  String get firma => [_nombre.text, _detalle.text, _telefono.text, _precio.text, _recurrente].join('|');
 
   List<CuentaCliente> get _cuentas =>
       ref.read(cuentasClientesProvider).asData?.value ?? const [];
@@ -58,6 +62,7 @@ class _PantallaFormularioClienteState extends ConsumerState<PantallaFormularioCl
     }
     // El aviso de nombre repetido aparece mientras la persona escribe.
     _nombre.addListener(_redibujar);
+    recordarInicio();
   }
 
   void _redibujar() => setState(() {});
@@ -75,7 +80,7 @@ class _PantallaFormularioClienteState extends ConsumerState<PantallaFormularioCl
     if (granja == null) return;
     setState(() {
       _guardando = true;
-      _error = null;
+      limpiarError();
     });
     try {
       final cliente = Cliente.nuevo(
@@ -91,7 +96,7 @@ class _PantallaFormularioClienteState extends ConsumerState<PantallaFormularioCl
       await ref.read(sincronizacionProvider.notifier).huboCambios();
       if (mounted) context.pop(cliente.id);
     } on ClienteInvalido catch (e) {
-      setState(() => _error = e.mensaje);
+      mostrarError(e.mensaje, e.campo);
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
@@ -120,7 +125,9 @@ class _PantallaFormularioClienteState extends ConsumerState<PantallaFormularioCl
           (c) => c.cliente.id != original?.cliente.id && c.cliente.nombre.toLowerCase() == nombre,
         );
 
-    return Scaffold(
+    return ProtegerCambios(
+      hayCambios: hayCambios,
+      child: Scaffold(
       body: ListView(
         padding: const EdgeInsets.only(bottom: e24),
         children: [
@@ -138,6 +145,7 @@ class _PantallaFormularioClienteState extends ConsumerState<PantallaFormularioCl
                 CampoGranja(
                   etiqueta: 'Nombre',
                   controller: _nombre,
+                  error: errorDe('nombre'),
                   pista: 'Ej.: Luz Marina Ospina',
                   mayusculas: TextCapitalization.words,
                 ),
@@ -159,6 +167,7 @@ class _PantallaFormularioClienteState extends ConsumerState<PantallaFormularioCl
                 CampoGranja(
                   etiqueta: 'Celular',
                   controller: _telefono,
+                  error: errorDe('telefono'),
                   opcional: true,
                   pista: '300 000 0000',
                   teclado: TextInputType.phone,
@@ -168,6 +177,7 @@ class _PantallaFormularioClienteState extends ConsumerState<PantallaFormularioCl
                 CampoGranja(
                   etiqueta: 'Precio por libra',
                   controller: _precio,
+                  error: errorDe('precio'),
                   opcional: true,
                   pista: 'Ej.: 5.600',
                   ayuda: 'Se sugiere en su primera venta; después se usa el de la última.',
@@ -179,7 +189,7 @@ class _PantallaFormularioClienteState extends ConsumerState<PantallaFormularioCl
                   recurrente: _recurrente,
                   alCambiar: (valor) => setState(() => _recurrente = valor),
                 ),
-                if (_error case final error?) ...[
+                if (errorGeneral case final error?) ...[
                   const SizedBox(height: e12),
                   AvisoError(error),
                 ],
@@ -210,6 +220,7 @@ class _PantallaFormularioClienteState extends ConsumerState<PantallaFormularioCl
           ),
         ],
       ),
+    ),
     );
   }
 }

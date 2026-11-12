@@ -9,6 +9,7 @@ import '../../../../compartido/diseno/colores.dart';
 import '../../../../compartido/diseno/encabezado_maiz.dart';
 import '../../../../compartido/diseno/espacios.dart';
 import '../../../../compartido/diseno/estado_error.dart';
+import '../../../../compartido/diseno/formulario.dart';
 import '../../../../compartido/diseno/fichas.dart';
 import '../../../../compartido/diseno/hoja_confirmar.dart';
 import '../../../../compartido/diseno/pulsable.dart';
@@ -32,13 +33,16 @@ class PantallaAbono extends ConsumerStatefulWidget {
   ConsumerState<PantallaAbono> createState() => _PantallaAbonoState();
 }
 
-class _PantallaAbonoState extends ConsumerState<PantallaAbono> {
+class _PantallaAbonoState extends ConsumerState<PantallaAbono>
+    with FormularioGranja {
   final _valor = TextEditingController();
   var _fecha = DateTime.now();
   String? _recibio;
   Abono? _original;
   var _guardando = false;
-  String? _error;
+
+  @override
+  String get firma => [_valor.text, _recibio, fechaCorta(_fecha)].join('|');
 
   @override
   void initState() {
@@ -52,6 +56,7 @@ class _PantallaAbonoState extends ConsumerState<PantallaAbono> {
       _recibio = abono.recibidoPor;
     }
     _valor.addListener(() => setState(() {}));
+    recordarInicio();
   }
 
   @override
@@ -63,7 +68,7 @@ class _PantallaAbonoState extends ConsumerState<PantallaAbono> {
   Future<void> _guardar(CuentaCliente cuenta) async {
     setState(() {
       _guardando = true;
-      _error = null;
+      limpiarError();
     });
     try {
       final abono = Abono.nuevo(
@@ -73,6 +78,7 @@ class _PantallaAbonoState extends ConsumerState<PantallaAbono> {
         valor: leerEntero(_valor.text) ?? 0,
         recibidoPor: _recibio,
         debeSinEste: cuenta.debeSin(_original),
+        primeraVentaFiada: cuenta.primeraFiada,
         hoy: DateTime.now(),
       );
       await ref
@@ -81,7 +87,7 @@ class _PantallaAbonoState extends ConsumerState<PantallaAbono> {
       await ref.read(sincronizacionProvider.notifier).huboCambios();
       if (mounted) context.pop();
     } on ClienteInvalido catch (e) {
-      setState(() => _error = e.mensaje);
+      mostrarError(e.mensaje, e.campo);
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
@@ -134,7 +140,9 @@ class _PantallaAbonoState extends ConsumerState<PantallaAbono> {
     final textos = Theme.of(context).textTheme;
     final apoyo = textos.bodySmall!.copyWith(color: ColoresGranja.textoSobreTinta);
 
-    return Scaffold(
+    return ProtegerCambios(
+      hayCambios: hayCambios,
+      child: Scaffold(
       body: ListView(
         padding: const EdgeInsets.only(bottom: e24),
         children: [
@@ -152,6 +160,7 @@ class _PantallaAbonoState extends ConsumerState<PantallaAbono> {
                 CampoGranja(
                   etiqueta: 'Cuánto pagó',
                   controller: _valor,
+                  error: errorDe('valor'),
                   pista: 'Ej.: 200.000',
                   teclado: TextInputType.number,
                   formatos: const [MilesAlEscribir()],
@@ -182,8 +191,13 @@ class _PantallaAbonoState extends ConsumerState<PantallaAbono> {
                 const SizedBox(height: e8),
                 SelectorFecha(
                   fecha: _fecha,
+                  desde: cuenta.primeraFiada,
                   alCambiar: (fecha) => setState(() => _fecha = fecha),
                 ),
+                if (errorDe('fecha') case final mensaje?) ...[
+                  const SizedBox(height: e8),
+                  AvisoError(mensaje),
+                ],
                 const SizedBox(height: e20),
                 TarjetaTicket(
                   child: Column(
@@ -207,7 +221,7 @@ class _PantallaAbonoState extends ConsumerState<PantallaAbono> {
                   const SizedBox(height: e12),
                   AvisoAtencion('${cliente.nombre} solo debe ${plata(debe)}. Revisa el valor.'),
                 ],
-                if (_error case final error?) ...[
+                if (errorGeneral case final error?) ...[
                   const SizedBox(height: e12),
                   AvisoError(error),
                 ],
@@ -229,6 +243,7 @@ class _PantallaAbonoState extends ConsumerState<PantallaAbono> {
           ),
         ],
       ),
+    ),
     );
   }
 }

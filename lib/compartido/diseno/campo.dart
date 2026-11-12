@@ -20,6 +20,7 @@ class CampoGranja extends StatelessWidget {
     this.formatos,
     this.mayusculas = TextCapitalization.none,
     this.lineas = 1,
+    this.error,
   });
 
   final String etiqueta;
@@ -33,6 +34,9 @@ class CampoGranja extends StatelessWidget {
 
   /// Más de una para notas.
   final int lineas;
+
+  /// Se muestra en rojo debajo del campo.
+  final String? error;
 
   @override
   Widget build(BuildContext context) {
@@ -79,6 +83,8 @@ class CampoGranja extends StatelessWidget {
             ),
             helperText: ayuda,
             helperMaxLines: 3,
+            errorText: error,
+            errorMaxLines: 3,
           ),
         ),
       ],
@@ -96,7 +102,11 @@ class MilesAlEscribir extends TextInputFormatter {
     TextEditingValue anterior,
     TextEditingValue nuevo,
   ) {
-    final numero = leerEntero(nuevo.text);
+    // Doce cifras alcanzan para cualquier plata de la granja; más sería un
+    // dedo pegado y no cabría en un número.
+    final digitos = nuevo.text.replaceAll(RegExp(r'\D'), '');
+    if (digitos.length > 12) return anterior;
+    final numero = leerEntero(digitos);
     final texto = numero == null ? '' : miles(numero);
     return TextEditingValue(
       text: texto,
@@ -104,3 +114,15 @@ class MilesAlEscribir extends TextInputFormatter {
     );
   }
 }
+
+/// Para campos de cantidades enteras: solo números y como mucho siete cifras.
+const soloCantidad = <TextInputFormatter>[
+  FilteringTextInputFormatter.digitsOnly,
+  LengthLimitingTextInputFormatter(7),
+];
+
+/// Para libras, kilos y metros: números con coma o punto.
+final soloDecimal = <TextInputFormatter>[
+  FilteringTextInputFormatter.allow(RegExp(r'[\d,.]')),
+  LengthLimitingTextInputFormatter(9),
+];

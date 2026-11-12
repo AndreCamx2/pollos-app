@@ -7,10 +7,13 @@ import '../../../../app/sincronizacion.dart';
 import '../../../../compartido/diseno/campo.dart';
 import '../../../../compartido/diseno/colores.dart';
 import '../../../../compartido/diseno/espacios.dart';
+import '../../../../compartido/diseno/estado_error.dart';
 import '../../../../compartido/diseno/fichas.dart';
+import '../../../../compartido/diseno/formulario.dart';
 import '../../../../compartido/diseno/hoja_confirmar.dart';
 import '../../../../compartido/diseno/selector_fecha.dart';
 import '../../../../compartido/diseno/tarjeta_ticket.dart';
+import '../../../../compartido/cifras.dart';
 import '../../../../compartido/formato.dart';
 import '../../dominio/registro.dart';
 import 'marco_registro.dart';
@@ -30,14 +33,17 @@ class PantallaMedicina extends ConsumerStatefulWidget {
   ConsumerState<PantallaMedicina> createState() => _PantallaMedicinaState();
 }
 
-class _PantallaMedicinaState extends ConsumerState<PantallaMedicina> {
+class _PantallaMedicinaState extends ConsumerState<PantallaMedicina>
+    with FormularioGranja {
   final _nombre = TextEditingController();
   final _costo = TextEditingController();
   final _nota = TextEditingController();
   var _fecha = DateTime.now();
   Medicamento? _original;
   var _guardando = false;
-  String? _error;
+
+  @override
+  String get firma => [_nombre.text, _costo.text, _nota.text, fechaCorta(_fecha)].join('|');
 
   @override
   void initState() {
@@ -51,6 +57,7 @@ class _PantallaMedicinaState extends ConsumerState<PantallaMedicina> {
     }
     _nombre.addListener(_redibujar);
     _costo.addListener(_redibujar);
+    recordarInicio();
   }
 
   void _redibujar() => setState(() {});
@@ -66,12 +73,12 @@ class _PantallaMedicinaState extends ConsumerState<PantallaMedicina> {
   Future<void> _guardar(LoteAbierto abierto) async {
     final costo = leerEntero(_costo.text);
     if (costo == null) {
-      setState(() => _error = 'Escribe cuánto costó.');
+      mostrarError('Escribe cuánto costó.', 'costo');
       return;
     }
     setState(() {
       _guardando = true;
-      _error = null;
+      limpiarError();
     });
     try {
       final medicina = Medicamento.nueva(
@@ -87,7 +94,7 @@ class _PantallaMedicinaState extends ConsumerState<PantallaMedicina> {
       await ref.read(sincronizacionProvider.notifier).huboCambios();
       if (mounted) context.pop();
     } on RegistroInvalido catch (e) {
-      setState(() => _error = e.mensaje);
+      mostrarError(e.mensaje, e.campo);
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
@@ -112,10 +119,12 @@ class _PantallaMedicinaState extends ConsumerState<PantallaMedicina> {
     if (abierto == null) return const LoteNoDisponible();
     final (:galpon, :lote, :cuentas) = abierto;
     final original = _original;
-    final usadas = [
+    final anteriores = [
       for (final registro in ref.watch(registrosProvider).asData?.value ?? const <Registro>[])
-        if (registro is Medicamento) registro.nombre,
+        if (registro is Medicamento && registro.id != original?.id) registro,
     ];
+    final usadas = [for (final m in anteriores) m.nombre];
+    final costosAnteriores = [for (final m in anteriores) m.costo];
     final sugerencias = {..._lasDeSiempre, ...usadas}.take(6).toList();
     final costo = leerEntero(_costo.text) ?? 0;
     final antes = cuentas.medicina - (original?.costo ?? 0);
@@ -131,7 +140,8 @@ class _PantallaMedicinaState extends ConsumerState<PantallaMedicina> {
       textoGuardar: 'Guardar medicina',
       guardando: _guardando,
       alGuardar: () => _guardar(abierto),
-      error: _error,
+      error: errorGeneral,
+      hayCambios: hayCambios,
       alBorrar: original == null ? null : () => _borrar(original),
       campos: [
         CampoGranja(
@@ -139,6 +149,7 @@ class _PantallaMedicinaState extends ConsumerState<PantallaMedicina> {
           controller: _nombre,
           pista: 'Nombre del producto',
           mayusculas: TextCapitalization.sentences,
+          error: errorDe('nombre'),
         ),
         const SizedBox(height: e8),
         FichasOpcion<String>(
@@ -154,7 +165,13 @@ class _PantallaMedicinaState extends ConsumerState<PantallaMedicina> {
           pista: 'Ej.: 45.000',
           teclado: TextInputType.number,
           formatos: const [MilesAlEscribir()],
+          error: errorDe('costo'),
         ),
+        if (avisoCifraRara(costo, _costoDeSiempre(usadas: costosAnteriores), comparadoCon: 'lo que sueles pagar por una medicina')
+            case final aviso?) ...[
+          const SizedBox(height: e8),
+          AvisoAtencion(aviso),
+        ],
         const SizedBox(height: e16),
         CampoGranja(
           etiqueta: 'Para qué o cómo se da',
@@ -171,6 +188,23 @@ class _PantallaMedicinaState extends ConsumerState<PantallaMedicina> {
           desde: lote.fechaLlegada,
           alCambiar: (fecha) => setState(() => _fecha = fecha),
         ),
+        if (errorDe('fecha') case final mensaje?) ...[
+          const SizedBox(height: e8),
+          AvisoError(mensaje),
+        ],
+        if (original == null && _nombre.text.trim().isNotEmpty)
+          if (avisoRepetido<Medicamento>(
+            ref,
+            loteId: lote.id,
+            fecha: _fecha,
+            excepto: null,
+            parecido: (m) => m.nombre.toLowerCase() == _nombre.text.trim().toLowerCase(),
+            describir: (m) => m.nombre,
+          )
+              case final aviso?) ...[
+            const SizedBox(height: e12),
+            AvisoAtencion(aviso),
+          ],
       ],
       resumen: TarjetaTicket(
         child: Column(
@@ -188,4 +222,12 @@ class _PantallaMedicinaState extends ConsumerState<PantallaMedicina> {
       ),
     );
   }
+}
+
+/// El promedio de lo que se ha pagado por medicina, o null si no hay con qué
+/// comparar.
+int? _costoDeSiempre({required List<int> usadas}) {
+  final validos = [for (final c in usadas) if (c > 0) c];
+  if (validos.length < 3) return null;
+  return validos.reduce((a, b) => a + b) ~/ validos.length;
 }

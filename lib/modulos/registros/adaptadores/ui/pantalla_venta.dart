@@ -1,7 +1,6 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -12,10 +11,12 @@ import '../../../../compartido/diseno/colores.dart';
 import '../../../../compartido/diseno/espacios.dart';
 import '../../../../compartido/diseno/estado_error.dart';
 import '../../../../compartido/diseno/fichas.dart';
+import '../../../../compartido/diseno/formulario.dart';
 import '../../../../compartido/diseno/hoja_confirmar.dart';
 import '../../../../compartido/diseno/selector_fecha.dart';
 import '../../../../compartido/diseno/tarjeta_ticket.dart';
 import '../../../../compartido/diseno/tema.dart';
+import '../../../../compartido/cifras.dart';
 import '../../../../compartido/formato.dart';
 import '../../../clientes/dominio/cliente.dart';
 import '../../dominio/registro.dart';
@@ -34,7 +35,8 @@ class PantallaVenta extends ConsumerStatefulWidget {
   ConsumerState<PantallaVenta> createState() => _PantallaVentaState();
 }
 
-class _PantallaVentaState extends ConsumerState<PantallaVenta> {
+class _PantallaVentaState extends ConsumerState<PantallaVenta>
+    with FormularioGranja {
   final _pollos = TextEditingController();
   final _libras = TextEditingController();
   final _precio = TextEditingController();
@@ -43,7 +45,16 @@ class _PantallaVentaState extends ConsumerState<PantallaVenta> {
   String? _clienteId;
   Venta? _original;
   var _guardando = false;
-  String? _error;
+
+  @override
+  String get firma => [
+        _clienteId,
+        _pollos.text,
+        _libras.text,
+        _precio.text,
+        _fiado,
+        fechaCorta(_fecha),
+      ].join('|');
 
   // Al elegir cliente se pone su precio, pero no encima de uno que la
   // persona ya escribió.
@@ -72,6 +83,7 @@ class _PantallaVentaState extends ConsumerState<PantallaVenta> {
       _precioEscrito = _precio.text.isNotEmpty;
       _redibujar();
     });
+    recordarInicio();
   }
 
   void _redibujar() => setState(() {});
@@ -119,16 +131,24 @@ class _PantallaVentaState extends ConsumerState<PantallaVenta> {
     final libras = leerDecimal(_libras.text);
     final precio = leerEntero(_precio.text);
     if (cuenta == null) {
-      setState(() => _error = 'Elige a quién le vendiste.');
+      mostrarError('Elige a quién le vendiste.', 'cliente');
       return;
     }
-    if (pollos == null || libras == null || precio == null) {
-      setState(() => _error = 'Escribe los pollos, las libras y el precio de la libra.');
+    if (pollos == null) {
+      mostrarError('Escribe cuántos pollos se vendieron.', 'pollos');
+      return;
+    }
+    if (libras == null) {
+      mostrarError('Escribe cuántas libras pesaron, por ejemplo 50,5.', 'libras');
+      return;
+    }
+    if (precio == null) {
+      mostrarError('Escribe el precio de la libra.', 'precio');
       return;
     }
     setState(() {
       _guardando = true;
-      _error = null;
+      limpiarError();
     });
     try {
       // Si la venta pasó a otro cliente, el anterior no puede quedar con
@@ -159,9 +179,9 @@ class _PantallaVentaState extends ConsumerState<PantallaVenta> {
       await ref.read(sincronizacionProvider.notifier).huboCambios();
       if (mounted) context.pop();
     } on RegistroInvalido catch (e) {
-      setState(() => _error = e.mensaje);
+      mostrarError(e.mensaje, e.campo);
     } on ClienteInvalido catch (e) {
-      setState(() => _error = e.mensaje);
+      mostrarError(e.mensaje);
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
@@ -170,9 +190,9 @@ class _PantallaVentaState extends ConsumerState<PantallaVenta> {
   Future<void> _borrar(Venta venta) async {
     final cuenta = _cuenta(venta.clienteId);
     if (cuenta != null && cuenta.debe - venta.fiadoPorCobrar < 0) {
-      setState(
-        () => _error = 'No se puede borrar: ${cuenta.cliente.nombre} ya abonó parte de '
-            'esta venta. Borra o corrige primero esos abonos.',
+      mostrarError(
+        'No se puede borrar: ${cuenta.cliente.nombre} ya abonó parte de '
+        'esta venta. Borra o corrige primero esos abonos.',
       );
       return;
     }
@@ -197,6 +217,10 @@ class _PantallaVentaState extends ConsumerState<PantallaVenta> {
     final original = _original;
     final clientes = ref.watch(cuentasClientesProvider).asData?.value ?? const <CuentaCliente>[];
     final cuenta = clientes.where((c) => c.cliente.id == _clienteId).firstOrNull;
+    final ultimoPrecioGranja = [
+      for (final r in ref.watch(registrosProvider).asData?.value ?? const <Registro>[])
+        if (r is Venta && r.id != original?.id) r.precioLibra,
+    ].firstOrNull;
     final disponibles = cuentas.vivosSin(original);
     final pollos = leerEntero(_pollos.text) ?? 0;
     final libras = leerDecimal(_libras.text) ?? 0;
@@ -213,7 +237,8 @@ class _PantallaVentaState extends ConsumerState<PantallaVenta> {
       textoGuardar: 'Guardar venta',
       guardando: _guardando,
       alGuardar: () => _guardar(abierto),
-      error: _error,
+      error: errorGeneral,
+      hayCambios: hayCambios,
       alBorrar: original == null ? null : () => _borrar(original),
       campos: [
         const EtiquetaCampo('Cliente'),
@@ -222,6 +247,10 @@ class _PantallaVentaState extends ConsumerState<PantallaVenta> {
           elegido: _clienteId,
           alElegir: _elegirCliente,
         ),
+        if (errorDe('cliente') case final mensaje?) ...[
+          const SizedBox(height: e8),
+          AvisoError(mensaje),
+        ],
         Align(
           alignment: Alignment.centerLeft,
           child: TextButton(onPressed: _nuevoCliente, child: const Text('Nuevo cliente')),
@@ -243,7 +272,8 @@ class _PantallaVentaState extends ConsumerState<PantallaVenta> {
                 controller: _pollos,
                 pista: 'Ej.: 10',
                 teclado: TextInputType.number,
-                formatos: [FilteringTextInputFormatter.digitsOnly],
+                formatos: soloCantidad,
+                error: errorDe('pollos'),
               ),
             ),
             const SizedBox(width: e12),
@@ -253,7 +283,8 @@ class _PantallaVentaState extends ConsumerState<PantallaVenta> {
                 controller: _libras,
                 pista: 'Ej.: 50,5',
                 teclado: const TextInputType.numberWithOptions(decimal: true),
-                formatos: [FilteringTextInputFormatter.allow(RegExp(r'[\d,.]'))],
+                formatos: soloDecimal,
+                error: errorDe('libras'),
               ),
             ),
           ],
@@ -265,7 +296,19 @@ class _PantallaVentaState extends ConsumerState<PantallaVenta> {
           pista: 'Ej.: 5.600',
           teclado: TextInputType.number,
           formatos: const [MilesAlEscribir()],
+          error: errorDe('precio'),
         ),
+        if (avisoCifraRara(
+          precio,
+          cuenta?.ultimoPrecio ?? ultimoPrecioGranja,
+          comparadoCon: cuenta?.ultimoPrecio != null
+              ? 'tu última venta a ${cuenta!.cliente.nombre}'
+              : 'tu última venta',
+        )
+            case final aviso?) ...[
+          const SizedBox(height: e8),
+          AvisoAtencion(aviso),
+        ],
         const SizedBox(height: e16),
         const EtiquetaCampo('Fecha'),
         SelectorFecha(
@@ -273,6 +316,10 @@ class _PantallaVentaState extends ConsumerState<PantallaVenta> {
           desde: lote.fechaLlegada,
           alCambiar: (fecha) => setState(() => _fecha = fecha),
         ),
+        if (errorDe('fecha') case final mensaje?) ...[
+          const SizedBox(height: e8),
+          AvisoError(mensaje),
+        ],
         const SizedBox(height: e16),
         const EtiquetaCampo('Pago'),
         FichasOpcion<bool>(
@@ -319,6 +366,19 @@ class _PantallaVentaState extends ConsumerState<PantallaVenta> {
               ],
             ),
           ),
+          if (original == null && pollos > 0)
+            if (avisoRepetido<Venta>(
+              ref,
+              loteId: lote.id,
+              fecha: _fecha,
+              excepto: null,
+              parecido: (v) => v.pollos == pollos && v.clienteId == _clienteId,
+              describir: (v) => 'una venta de ${v.pollos} ${v.pollos == 1 ? 'pollo' : 'pollos'} a este cliente',
+            )
+                case final aviso?) ...[
+              const SizedBox(height: e12),
+              AvisoAtencion(aviso),
+            ],
           if (pollos > disponibles) ...[
             const SizedBox(height: e12),
             AvisoAtencion('Solo quedan ${miles(disponibles)} vivos en este galpón.'),

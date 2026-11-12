@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -10,6 +9,7 @@ import '../../../../compartido/diseno/colores.dart';
 import '../../../../compartido/diseno/encabezado_maiz.dart';
 import '../../../../compartido/diseno/espacios.dart';
 import '../../../../compartido/diseno/estado_error.dart';
+import '../../../../compartido/diseno/formulario.dart';
 import '../../../../compartido/diseno/hoja_confirmar.dart';
 import '../../../../compartido/diseno/pulsable.dart';
 import '../../../../compartido/diseno/tarjeta_ticket.dart';
@@ -30,14 +30,17 @@ class PantallaFormularioGalpon extends ConsumerStatefulWidget {
 }
 
 class _PantallaFormularioGalponState
-    extends ConsumerState<PantallaFormularioGalpon> {
+    extends ConsumerState<PantallaFormularioGalpon>
+    with FormularioGranja {
   final _nombre = TextEditingController();
   final _capacidad = TextEditingController();
   final _largo = TextEditingController();
   final _ancho = TextEditingController();
   final _donde = TextEditingController();
   var _guardando = false;
-  String? _error;
+
+  @override
+  String get firma => [_nombre, _capacidad, _largo, _ancho, _donde].map((c) => c.text).join('|');
 
   List<TextEditingController> get _campos =>
       [_nombre, _capacidad, _largo, _ancho, _donde];
@@ -67,6 +70,7 @@ class _PantallaFormularioGalponState
     for (final campo in _campos) {
       campo.addListener(_redibujar);
     }
+    recordarInicio();
   }
 
   void _redibujar() => setState(() {});
@@ -84,7 +88,7 @@ class _PantallaFormularioGalponState
     if (granja == null) return;
     setState(() {
       _guardando = true;
-      _error = null;
+      limpiarError();
     });
     try {
       final galpon = Galpon.nuevo(
@@ -101,7 +105,7 @@ class _PantallaFormularioGalponState
       await ref.read(sincronizacionProvider.notifier).huboCambios();
       if (mounted) context.pop();
     } on GalponInvalido catch (e) {
-      setState(() => _error = e.mensaje);
+      mostrarError(e.mensaje, e.campo);
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
@@ -127,7 +131,9 @@ class _PantallaFormularioGalponState
         .any((lote) => lote.galponId == widget.galponId);
     const metros = TextInputType.numberWithOptions(decimal: true);
 
-    return Scaffold(
+    return ProtegerCambios(
+      hayCambios: hayCambios,
+      child: Scaffold(
       body: ListView(
         padding: const EdgeInsets.only(bottom: e24),
         children: [
@@ -145,6 +151,7 @@ class _PantallaFormularioGalponState
                 CampoGranja(
                   etiqueta: 'Nombre del galpón',
                   controller: _nombre,
+                  error: errorDe('nombre'),
                   pista: 'Ej.: Galpón 1',
                   mayusculas: TextCapitalization.sentences,
                 ),
@@ -152,6 +159,7 @@ class _PantallaFormularioGalponState
                 CampoGranja(
                   etiqueta: 'Cuántos pollos caben',
                   controller: _capacidad,
+                  error: errorDe('capacidad'),
                   opcional: true,
                   pista: 'Ej.: 600',
                   ayuda: 'Sirve para avisarte si un lote trae más pollitos de los que caben.',
@@ -166,9 +174,10 @@ class _PantallaFormularioGalponState
                       child: CampoGranja(
                         etiqueta: 'Largo en metros',
                         controller: _largo,
+                  error: errorDe('medidas'),
                         pista: 'Ej.: 12',
                         teclado: metros,
-                        formatos: [FilteringTextInputFormatter.allow(RegExp(r'[\d,.]'))],
+                        formatos: soloDecimal,
                       ),
                     ),
                     const SizedBox(width: e12),
@@ -178,7 +187,7 @@ class _PantallaFormularioGalponState
                         controller: _ancho,
                         pista: 'Ej.: 6',
                         teclado: metros,
-                        formatos: [FilteringTextInputFormatter.allow(RegExp(r'[\d,.]'))],
+                        formatos: soloDecimal,
                       ),
                     ),
                   ],
@@ -199,7 +208,7 @@ class _PantallaFormularioGalponState
                   largo: leerDecimal(_largo.text),
                   ancho: leerDecimal(_ancho.text),
                 ),
-                if (_error case final error?) ...[
+                if (errorGeneral case final error?) ...[
                   const SizedBox(height: e12),
                   AvisoError(error),
                 ],
@@ -221,6 +230,7 @@ class _PantallaFormularioGalponState
           ),
         ],
       ),
+    ),
     );
   }
 }

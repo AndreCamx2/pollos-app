@@ -459,6 +459,7 @@ class _Movimientos extends ConsumerWidget {
       for (final cuenta in ref.watch(cuentasClientesProvider).asData?.value ?? const <CuentaCliente>[])
         cuenta.cliente.id: cuenta.cliente.nombre,
     };
+    final nombreDeMarca = ref.watch(nombreDeMarcaProvider);
     String quien(Registro registro) => switch (registro.creadoPor) {
           final id? when id == miId => 'registraste tú',
           final id? when nombres[id] != null => 'registró ${nombres[id]}',
@@ -481,6 +482,7 @@ class _Movimientos extends ConsumerWidget {
                   registro: registro,
                   quien: quien(registro),
                   cliente: registro is Venta ? clientes[registro.clienteId] : null,
+                  marca: registro is CompraAlimento ? nombreDeMarca(registro) : null,
                   alTocar: registro.puedeCambiarlo(
                     administra: granja.rol.administra,
                     usuarioId: miId,
@@ -509,6 +511,7 @@ class _FilaMovimiento extends StatelessWidget {
     required this.quien,
     required this.alTocar,
     this.cliente,
+    this.marca,
   });
 
   final Registro registro;
@@ -516,6 +519,9 @@ class _FilaMovimiento extends StatelessWidget {
 
   /// A quién se le vendió, si es una venta.
   final String? cliente;
+
+  /// El nombre de la marca como está en la lista, si es una compra.
+  final String? marca;
 
   /// Null si la persona no puede corregir este registro.
   final VoidCallback? alTocar;
@@ -533,7 +539,7 @@ class _FilaMovimiento extends StatelessWidget {
                   color: ColoresGranja.papel,
                   tamano: 40,
                 ),
-          '${c.bultos} ${c.bultos == 1 ? 'bulto' : 'bultos'} de ${c.tipo.name} · ${c.marca}',
+          '${c.bultos} ${c.bultos == 1 ? 'bulto' : 'bultos'} de ${c.tipo.name} · ${marca ?? c.marca}',
           plata(c.total),
           ColoresGranja.tinta,
         ),

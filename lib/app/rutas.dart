@@ -15,6 +15,7 @@ import '../modulos/granja/adaptadores/ui/pantalla_personas.dart';
 import '../modulos/granja/adaptadores/ui/pantalla_sin_granja.dart';
 import '../modulos/lotes/adaptadores/ui/pantalla_formulario_lote.dart';
 import '../modulos/registros/adaptadores/ui/pantalla_compra_alimento.dart';
+import '../modulos/registros/adaptadores/ui/pantalla_formulario_marca.dart';
 import '../modulos/registros/adaptadores/ui/pantalla_medicina.dart';
 import '../modulos/registros/adaptadores/ui/pantalla_muertos.dart';
 import '../modulos/registros/adaptadores/ui/pantalla_venta.dart';
@@ -94,6 +95,11 @@ final rutasProvider = Provider<GoRouter>((ref) {
             ),
           ],
         ),
+      GoRoute(path: '/marcas/nueva', builder: (_, _) => const PantallaFormularioMarca()),
+      GoRoute(
+        path: '/marcas/:id/editar',
+        builder: (_, estado) => PantallaFormularioMarca(marcaId: estado.pathParameters['id']),
+      ),
       GoRoute(
         path: '/clientes/nuevo',
         builder: (_, _) => const PantallaFormularioCliente(),

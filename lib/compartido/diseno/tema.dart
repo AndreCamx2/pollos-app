@@ -68,6 +68,13 @@ ThemeData temaGranja() {
       focusedBorder: borde.copyWith(
         borderSide: const BorderSide(color: ColoresGranja.tinta, width: 2),
       ),
+      errorBorder: borde.copyWith(
+        borderSide: const BorderSide(color: ColoresGranja.granero, width: 2),
+      ),
+      focusedErrorBorder: borde.copyWith(
+        borderSide: const BorderSide(color: ColoresGranja.granero, width: 2),
+      ),
+      errorStyle: conPeso(cuerpo.copyWith(fontSize: 13, color: ColoresGranja.granero), 600),
       labelStyle: const TextStyle(color: ColoresGranja.tintaSuave),
       floatingLabelStyle: const TextStyle(color: ColoresGranja.tinta),
     ),
