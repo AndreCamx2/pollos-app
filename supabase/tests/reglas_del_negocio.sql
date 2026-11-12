@@ -141,6 +141,11 @@ select pruebas.debe_fallar(
 
 -- Permisos del trabajador.
 select pruebas.igual(
+  pruebas.filas($s$update public.miembros set rol = 'dueno'
+                  where usuario_id = '00000000-0000-0000-0000-00000000000b'$s$),
+  0, 'el trabajador no se sube de rol él mismo');
+
+select pruebas.igual(
   pruebas.filas($s$update public.ventas set fecha = '2026-10-11'
                   where id = '40000000-0000-0000-0000-000000000002'$s$),
   0, 'el trabajador no edita ventas que registró otro');
@@ -207,6 +212,24 @@ select pruebas.debe_fallar(
 
 select pruebas.debe_fallar(
   $s$delete from public.miembros where usuario_id = '00000000-0000-0000-0000-00000000000a'$s$,
+  'al menos un dueño');
+
+select pruebas.igual(
+  pruebas.filas($s$update public.miembros set rol = 'administrador'
+                  where usuario_id = '00000000-0000-0000-0000-00000000000b'$s$),
+  1, 'la dueña cambia de rol a Beto');
+
+update public.miembros set rol = 'trabajador'
+where usuario_id = '00000000-0000-0000-0000-00000000000b';
+
+select pruebas.debe_fallar(
+  $s$update public.miembros set usuario_id = '00000000-0000-0000-0000-00000000000d'
+     where usuario_id = '00000000-0000-0000-0000-00000000000b'$s$,
+  'permission denied');
+
+select pruebas.debe_fallar(
+  $s$update public.miembros set rol = 'trabajador'
+     where usuario_id = '00000000-0000-0000-0000-00000000000a'$s$,
   'al menos un dueño');
 
 update public.lotes set cerrado_en = now() where id = '20000000-0000-0000-0000-000000000001';

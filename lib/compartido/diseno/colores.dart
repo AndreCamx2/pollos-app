@@ -24,6 +24,10 @@ abstract final class ColoresGranja {
   static const tintaSuave = Color(0xFF6B5D52);
   static const textoSobreTinta = Color(0xFFCDBFAF);
 
+  /// El gallo de la app: cresta y barbillas, y el pico.
+  static const cresta = Color(0xFFD63A22);
+  static const pico = Color(0xFFF08A24);
+
   static const crema = Color(0xFFFBF5EC);
   static const papel = Color(0xFFFFFFFF);
   static const borde = Color(0x1F2B211A);

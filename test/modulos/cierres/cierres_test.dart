@@ -94,5 +94,6 @@ void main() {
     expect(texto, contains(r'Ganancia: $2.000.000'));
     expect(texto, contains('15 muertos (3 %)'));
     expect(texto, contains(r'- Don Jaime: 485 pollos, $3.000.000'));
+    expect(texto.split('\n').last, 'Hecho con Mis pollos');
   });
 }

@@ -8,7 +8,7 @@ import 'tema.dart';
 
 /// Un campo de formulario con la etiqueta arriba y la letra grande, para
 /// escribir con el celular en una mano.
-class CampoGranja extends StatelessWidget {
+class CampoGranja extends StatefulWidget {
   const CampoGranja({
     super.key,
     required this.etiqueta,
@@ -21,6 +21,10 @@ class CampoGranja extends StatelessWidget {
     this.mayusculas = TextCapitalization.none,
     this.lineas = 1,
     this.error,
+    this.clave = false,
+    this.autollenado,
+    this.accionTeclado,
+    this.alTerminar,
   });
 
   final String etiqueta;
@@ -38,18 +42,33 @@ class CampoGranja extends StatelessWidget {
   /// Se muestra en rojo debajo del campo.
   final String? error;
 
+  /// Oculta lo escrito y pone el ojo para verlo.
+  final bool clave;
+
+  final Iterable<String>? autollenado;
+  final TextInputAction? accionTeclado;
+  final ValueChanged<String>? alTerminar;
+
+  @override
+  State<CampoGranja> createState() => _CampoGranjaState();
+}
+
+class _CampoGranjaState extends State<CampoGranja> {
+  var _verClave = false;
+
   @override
   Widget build(BuildContext context) {
     final textos = Theme.of(context).textTheme;
+    final oculto = widget.clave && !_verClave;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text.rich(
           TextSpan(
-            text: etiqueta,
+            text: widget.etiqueta,
             style: conPeso(textos.bodyMedium!, 700),
             children: [
-              if (opcional)
+              if (widget.opcional)
                 TextSpan(
                   text: ' (opcional)',
                   style: conPeso(
@@ -62,12 +81,18 @@ class CampoGranja extends StatelessWidget {
         ),
         const SizedBox(height: e8),
         TextField(
-          controller: controller,
-          keyboardType: teclado,
-          inputFormatters: formatos,
-          textCapitalization: mayusculas,
-          minLines: lineas > 1 ? 2 : null,
-          maxLines: lineas,
+          controller: widget.controller,
+          keyboardType: widget.clave ? TextInputType.visiblePassword : widget.teclado,
+          inputFormatters: widget.formatos,
+          textCapitalization: widget.mayusculas,
+          obscureText: oculto,
+          autocorrect: !widget.clave,
+          enableSuggestions: !widget.clave,
+          autofillHints: widget.autollenado,
+          textInputAction: widget.accionTeclado,
+          onSubmitted: widget.alTerminar,
+          minLines: widget.lineas > 1 ? 2 : null,
+          maxLines: widget.lineas,
           style: conPeso(
             textos.bodyLarge!.copyWith(
               fontSize: 20,
@@ -76,18 +101,55 @@ class CampoGranja extends StatelessWidget {
             700,
           ),
           decoration: InputDecoration(
-            hintText: pista,
+            hintText: widget.pista,
             hintStyle: conPeso(
               textos.bodyLarge!.copyWith(color: ColoresGranja.tintaSuave),
               400,
             ),
-            helperText: ayuda,
+            helperText: widget.ayuda,
             helperMaxLines: 3,
-            errorText: error,
+            errorText: widget.error,
             errorMaxLines: 3,
+            suffixIcon: widget.clave
+                ? IconButton(
+                    tooltip: _verClave ? 'Ocultar contraseña' : 'Mostrar contraseña',
+                    color: ColoresGranja.tintaSuave,
+                    icon: Icon(
+                      _verClave
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                    ),
+                    onPressed: () => setState(() => _verClave = !_verClave),
+                  )
+                : null,
           ),
         ),
       ],
+    );
+  }
+}
+
+/// La flecha de las listas desplegables, en un círculo para que se note que
+/// el campo se abre y no es para escribir.
+class FlechaDeLista extends StatelessWidget {
+  const FlechaDeLista({super.key, this.abierta = false});
+
+  final bool abierta;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 34,
+      height: 34,
+      decoration: const BoxDecoration(
+        color: ColoresGranja.maizClaro,
+        shape: BoxShape.circle,
+      ),
+      child: Icon(
+        abierta ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+        color: ColoresGranja.maizOscuro,
+        size: 24,
+      ),
     );
   }
 }

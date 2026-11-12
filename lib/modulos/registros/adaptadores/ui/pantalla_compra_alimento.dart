@@ -263,7 +263,7 @@ class _PantallaCompraAlimentoState extends ConsumerState<PantallaCompraAlimento>
               child: CampoGranja(
                 etiqueta: 'Bultos',
                 controller: _bultos,
-                pista: 'Ej.: 10',
+                pista: 'Ingresa los bultos',
                 teclado: TextInputType.number,
                 formatos: soloCantidad,
                 error: errorDe('bultos'),
@@ -274,7 +274,7 @@ class _PantallaCompraAlimentoState extends ConsumerState<PantallaCompraAlimento>
               child: CampoGranja(
                 etiqueta: 'Kilos por bulto',
                 controller: _kilos,
-                pista: 'Ej.: 40',
+                pista: 'Ingresa los kilos',
                 teclado: const TextInputType.numberWithOptions(decimal: true),
                 formatos: soloDecimal,
                 error: errorDe('kilos'),
@@ -286,7 +286,7 @@ class _PantallaCompraAlimentoState extends ConsumerState<PantallaCompraAlimento>
         CampoGranja(
           etiqueta: 'Precio por bulto',
           controller: _precio,
-          pista: 'Ej.: 104.000',
+          pista: 'Ingresa el precio por bulto',
           teclado: TextInputType.number,
           formatos: const [MilesAlEscribir()],
           error: errorDe('precio'),
@@ -376,6 +376,11 @@ class MenuMarcas extends StatelessWidget {
       hintText: marcas.isEmpty ? 'Todavía no hay marcas: crea una' : 'Elige o escribe la marca',
       textStyle: conPeso(textos.bodyLarge!, 700),
       menuHeight: 320,
+      // DropdownMenu no toma el estilo de los campos del tema y quedaba del
+      // color del fondo.
+      inputDecorationTheme: Theme.of(context).inputDecorationTheme,
+      trailingIcon: const FlechaDeLista(),
+      selectedTrailingIcon: const FlechaDeLista(abierta: true),
       menuStyle: const MenuStyle(
         backgroundColor: WidgetStatePropertyAll(ColoresGranja.papel),
         surfaceTintColor: WidgetStatePropertyAll(Colors.transparent),

@@ -3,6 +3,29 @@
 Cada versión corresponde a una parte del proyecto. El número de la derecha del
 `+` en `pubspec.yaml` sube con cada APK que se instala.
 
+## 1.0.0 · Lista para usar con datos reales
+
+- Entrada nueva con el gallo de la app: cada error sale debajo de su campo, el
+  correo se revisa antes de mandarlo y hay mensajes claros para contraseña
+  equivocada, falta de señal y demasiados intentos.
+- La primera vez, la contraseña nueva se escribe dos veces, las dos con el
+  ojo para verla, y la lista de requisitos se marca mientras se escribe.
+- El gallo es el ícono de la app en el celular.
+- El gallo acompaña la app: firma el encabezado, canta mientras carga y sobre
+  un lote con ganancia, duerme en las pantallas vacías y pone cara de duda en
+  los errores. La app abre en el maíz con el gallo, sin el instante en blanco.
+- Iconos con el trazo más firme, listas desplegables en blanco con la flecha en
+  un círculo, Personas con el encabezado de la granja y la pantalla sin granja
+  con el del gallo.
+- El resumen que se comparte termina con "Hecho con Mis pollos".
+- El dueño cambia el rol de cada persona o la saca de la granja, y cualquiera
+  puede salirse. Siempre queda al menos un dueño.
+- La app recuerda la última granja elegida.
+- Los campos dicen qué ingresar en vez de mostrar ejemplos.
+- Ya no aparece por un instante la pantalla de unirse a una granja al entrar.
+- Firma propia del APK y guía para pasar a producción en el README.
+- Base de datos: migración `20261114000000_solo_cambiar_rol.sql`.
+
 ## 0.6.0 · Cierres
 
 - Al cerrar un lote, los pollos tienen que cuadrar: si en las cuentas quedan

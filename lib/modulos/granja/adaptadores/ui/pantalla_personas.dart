@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../app/proveedores.dart';
 import '../../../../compartido/diseno/colores.dart';
+import '../../../../compartido/diseno/encabezado_maiz.dart';
 import '../../../../compartido/diseno/estado_error.dart';
+import '../../../../compartido/diseno/hoja_confirmar.dart';
 import '../../../../compartido/diseno/movimiento.dart';
 import '../../../../compartido/diseno/pulsable.dart';
 import '../../../../compartido/diseno/tema.dart';
@@ -20,128 +23,323 @@ class PantallaPersonas extends ConsumerWidget {
     final granja = ref.watch(granjaActualProvider);
     if (granja == null) return const Scaffold();
     final miId = ref.watch(usuarioIdProvider);
-    final textos = Theme.of(context).textTheme;
+    final miembros = ref.watch(miembrosProvider(granja.id));
+    final cuantos = miembros.asData?.value.length;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Personas')),
-      body: ref.watch(miembrosProvider(granja.id)).when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (error, _) => EstadoError(
-              error: error,
-              alReintentar: () => ref.invalidate(miembrosProvider(granja.id)),
-            ),
-            data: (miembros) => ListView(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-              children: [
-                Text(granja.nombre.toUpperCase(), style: textos.labelLarge),
-                const SizedBox(height: 8),
-                Container(
-                  decoration: BoxDecoration(
-                    color: ColoresGranja.papel,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: ColoresGranja.borde),
-                  ),
-                  child: Column(
-                    children: [
-                      for (final (i, miembro) in miembros.indexed) ...[
-                        if (i > 0)
-                          const Divider(
-                            height: 1,
-                            indent: 16,
-                            endIndent: 16,
-                            color: ColoresGranja.borde,
-                          ),
-                        _FilaMiembro(miembro: miembro, soyYo: miembro.usuarioId == miId),
-                      ],
-                    ],
-                  ),
-                ),
-                if (granja.rol.administra) ...[
-                  const SizedBox(height: 24),
-                  BotonPrincipal(
-                    texto: 'Invitar a alguien',
-                    onPressed: () => showModalBottomSheet<void>(
-                      context: context,
-                      isScrollControlled: true,
-                      sheetAnimationStyle: const AnimationStyle(
-                        curve: Curvas.hoja,
-                        duration: Duration(milliseconds: 280),
-                        reverseDuration: Duration(milliseconds: 220),
-                      ),
-                      builder: (_) => _HojaInvitar(granjaId: granja.id),
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 32),
-                Center(
-                  child: TextButton(
-                    onPressed: () => ref.read(supabaseProvider).auth.signOut(),
-                    child: const Text('Cerrar sesión'),
-                  ),
-                ),
-              ],
+      body: ListView(
+        padding: const EdgeInsets.only(bottom: 24),
+        children: [
+          EncabezadoMaiz(
+            child: TitularPantalla(
+              titulo: 'Personas',
+              subtitulo: cuantos == null
+                  ? granja.nombre
+                  : '${granja.nombre} · $cuantos ${cuantos == 1 ? 'persona' : 'personas'}',
             ),
           ),
-    );
-  }
-}
-
-class _FilaMiembro extends StatelessWidget {
-  const _FilaMiembro({required this.miembro, required this.soyYo});
-
-  final Miembro miembro;
-  final bool soyYo;
-
-  @override
-  Widget build(BuildContext context) {
-    final textos = Theme.of(context).textTheme;
-    final nombre = miembro.nombre;
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          SizedBox.square(
-            dimension: 40,
-            child: DecoratedBox(
-              decoration: const BoxDecoration(
-                color: ColoresGranja.maizClaro,
-                shape: BoxShape.circle,
+          ...miembros.when<List<Widget>>(
+            loading: () => const [
+              Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(child: CircularProgressIndicator()),
               ),
-              child: Center(
-                child: nombre == null
-                    ? const Icon(Icons.person_outline_rounded, color: ColoresGranja.textoSobreMaiz)
-                    : Text(
-                        iniciales(nombre),
-                        style: conPeso(
-                          textos.bodyMedium!.copyWith(color: ColoresGranja.textoSobreMaiz),
-                          700,
+            ],
+            error: (error, _) => [
+              EstadoError(
+                error: error,
+                alReintentar: () => ref.invalidate(miembrosProvider(granja.id)),
+              ),
+            ],
+            data: (miembros) => [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        color: ColoresGranja.papel,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: ColoresGranja.borde),
+                      ),
+                      child: Column(
+                        children: [
+                          for (final (i, miembro) in miembros.indexed) ...[
+                            if (i > 0)
+                              const Divider(
+                                height: 1,
+                                indent: 16,
+                                endIndent: 16,
+                                color: ColoresGranja.borde,
+                              ),
+                            _FilaMiembro(
+                              miembro: miembro,
+                              soyYo: miembro.usuarioId == miId,
+                              alTocar: granja.rol == Rol.dueno && miembro.usuarioId != miId
+                                  ? () => showModalBottomSheet<void>(
+                                        context: context,
+                                        isScrollControlled: true,
+                                        sheetAnimationStyle: animacionDeHoja,
+                                        builder: (_) =>
+                                            _HojaMiembro(granja: granja, miembro: miembro),
+                                      )
+                                  : null,
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    if (granja.rol == Rol.dueno && miembros.length > 1) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        'Toca a una persona para cambiarle el rol o sacarla de la granja.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                    if (granja.rol.administra) ...[
+                      const SizedBox(height: 24),
+                      BotonPrincipal(
+                        texto: 'Invitar a alguien',
+                        onPressed: () => showModalBottomSheet<void>(
+                          context: context,
+                          isScrollControlled: true,
+                          sheetAnimationStyle: const AnimationStyle(
+                            curve: Curvas.hoja,
+                            duration: Duration(milliseconds: 280),
+                            reverseDuration: Duration(milliseconds: 220),
+                          ),
+                          builder: (_) => _HojaInvitar(granjaId: granja.id),
                         ),
                       ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  nombre == null
-                      ? 'Aún no ha entrado'
-                      : soyYo
-                          ? '$nombre (tú)'
-                          : nombre,
-                  style: textos.titleMedium,
-                  maxLines: 2,
+                    ],
+                    const SizedBox(height: 32),
+                    Center(
+                      child: TextButton(
+                        onPressed: () => _salir(context, ref, granja),
+                        style: TextButton.styleFrom(foregroundColor: ColoresGranja.granero),
+                        child: const Text('Salir de esta granja'),
+                      ),
+                    ),
+                    Center(
+                      child: TextButton(
+                        onPressed: () => ref.read(supabaseProvider).auth.signOut(),
+                        child: const Text('Cerrar sesión'),
+                      ),
+                    ),
+                  ],
                 ),
-                Text(miembro.rol.etiqueta, style: textos.bodySmall),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
+}
+
+Future<void> _salir(BuildContext context, WidgetRef ref, Granja granja) async {
+  final sale = await confirmar(
+    context,
+    titulo: '¿Salir de ${granja.nombre}?',
+    detalle: 'Dejarás de ver sus galpones y sus cuentas. Para volver vas a '
+        'necesitar un código nuevo.',
+    accion: 'Salir de la granja',
+  );
+  if (!sale) return;
+  final db = ref.read(supabaseProvider);
+  try {
+    await db
+        .from('miembros')
+        .delete()
+        .eq('granja_id', granja.id)
+        .eq('usuario_id', db.auth.currentUser!.id);
+    ref.invalidate(misGranjasProvider);
+    if (context.mounted) Navigator.maybePop(context);
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(mensajeDeError(e))));
+    }
+  }
+}
+
+class _FilaMiembro extends StatelessWidget {
+  const _FilaMiembro({required this.miembro, required this.soyYo, this.alTocar});
+
+  final Miembro miembro;
+  final bool soyYo;
+
+  /// Solo el dueño lo tiene, para cambiar el rol o sacar a la persona.
+  final VoidCallback? alTocar;
+
+  @override
+  Widget build(BuildContext context) {
+    final textos = Theme.of(context).textTheme;
+    final nombre = miembro.nombre;
+    return Pulsable(
+      onTap: alTocar,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            SizedBox.square(
+              dimension: 40,
+              child: DecoratedBox(
+                decoration: const BoxDecoration(
+                  color: ColoresGranja.maizClaro,
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: nombre == null
+                      ? const Icon(Icons.person_outline_rounded, color: ColoresGranja.textoSobreMaiz)
+                      : Text(
+                          iniciales(nombre),
+                          style: conPeso(
+                            textos.bodyMedium!.copyWith(color: ColoresGranja.textoSobreMaiz),
+                            700,
+                          ),
+                        ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    nombre == null
+                        ? 'Aún no ha entrado'
+                        : soyYo
+                            ? '$nombre (tú)'
+                            : nombre,
+                    style: textos.titleMedium,
+                    maxLines: 2,
+                  ),
+                  Text(miembro.rol.etiqueta, style: textos.bodySmall),
+                ],
+              ),
+            ),
+            if (alTocar != null)
+              const Icon(Icons.chevron_right_rounded, color: ColoresGranja.tintaSuave),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+const _queHace = {
+  Rol.dueno: 'Puede todo, incluido cambiar roles, sacar personas y borrar la granja.',
+  Rol.administrador: 'Maneja galpones y lotes, cierra lotes e invita personas.',
+  Rol.trabajador: 'Registra alimento, muertos, medicina, ventas, clientes y abonos.',
+};
+
+class _HojaMiembro extends ConsumerStatefulWidget {
+  const _HojaMiembro({required this.granja, required this.miembro});
+
+  final Granja granja;
+  final Miembro miembro;
+
+  @override
+  ConsumerState<_HojaMiembro> createState() => _HojaMiembroState();
+}
+
+class _HojaMiembroState extends ConsumerState<_HojaMiembro> {
+  late var _rol = widget.miembro.rol;
+  var _guardando = false;
+  String? _error;
+
+  String get _nombre => widget.miembro.nombre ?? 'esta persona';
+
+  Future<void> _hacer(Future<List<Map<String, dynamic>>> Function() cambio) async {
+    setState(() {
+      _guardando = true;
+      _error = null;
+    });
+    try {
+      final filas = await cambio();
+      // Sin filas es que la política no lo dejó: quizás ya no es dueño.
+      if (filas.isEmpty) throw const _SinPermiso();
+      ref.invalidate(miembrosProvider(widget.granja.id));
+      if (mounted) Navigator.pop(context);
+    } on _SinPermiso {
+      if (mounted) setState(() => _error = 'Solo el dueño puede cambiar a las personas.');
+    } catch (e) {
+      if (mounted) setState(() => _error = mensajeDeError(e));
+    } finally {
+      if (mounted) setState(() => _guardando = false);
+    }
+  }
+
+  PostgrestFilterBuilder<T> _fila<T>(PostgrestFilterBuilder<T> consulta) => consulta
+      .eq('granja_id', widget.granja.id)
+      .eq('usuario_id', widget.miembro.usuarioId);
+
+  Future<void> _sacar() async {
+    final saca = await confirmar(
+      context,
+      titulo: '¿Sacar a $_nombre?',
+      detalle: 'Ya no podrá ver ni anotar nada en ${widget.granja.nombre}. Lo que '
+          'registró se queda. Para volver necesitará un código nuevo.',
+      accion: 'Sacar de la granja',
+    );
+    if (!saca) return;
+    final db = ref.read(supabaseProvider);
+    await _hacer(() => _fila(db.from('miembros').delete()).select());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textos = Theme.of(context).textTheme;
+    final db = ref.read(supabaseProvider);
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(widget.miembro.nombre ?? 'Aún no ha entrado', style: textos.titleLarge),
+            const SizedBox(height: 12),
+            for (final rol in Rol.values) ...[
+              _OpcionRol(
+                rol: rol,
+                ayuda: _queHace[rol]!,
+                elegido: _rol,
+                alElegir: (rol) => setState(() => _rol = rol),
+              ),
+              const SizedBox(height: 8),
+            ],
+            if (_error case final error?) ...[
+              const SizedBox(height: 4),
+              AvisoError(error),
+            ],
+            const SizedBox(height: 12),
+            BotonPrincipal(
+              texto: 'Guardar el rol',
+              cargando: _guardando,
+              onPressed: _rol == widget.miembro.rol
+                  ? null
+                  : () => _hacer(
+                        () => _fila(db.from('miembros').update({'rol': _rol.name})).select(),
+                      ),
+            ),
+            const SizedBox(height: 4),
+            TextButton(
+              onPressed: _guardando ? null : _sacar,
+              style: TextButton.styleFrom(foregroundColor: ColoresGranja.granero),
+              child: const Text('Sacar de la granja'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SinPermiso implements Exception {
+  const _SinPermiso();
 }
 
 class _HojaInvitar extends ConsumerStatefulWidget {
@@ -204,14 +402,14 @@ class _HojaInvitarState extends ConsumerState<_HojaInvitar> {
                   const SizedBox(height: 12),
                   _OpcionRol(
                     rol: Rol.trabajador,
-                    ayuda: 'Registra alimento, muertos, medicina, ventas, clientes y abonos.',
+                    ayuda: _queHace[Rol.trabajador]!,
                     elegido: _rol,
                     alElegir: (rol) => setState(() => _rol = rol),
                   ),
                   const SizedBox(height: 8),
                   _OpcionRol(
                     rol: Rol.administrador,
-                    ayuda: 'Además maneja galpones y lotes, cierra lotes e invita personas.',
+                    ayuda: _queHace[Rol.administrador]!,
                     elegido: _rol,
                     alElegir: (rol) => setState(() => _rol = rol),
                   ),

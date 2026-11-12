@@ -88,6 +88,8 @@ String textoParaCompartir(
       for (final venta in cuentas.ventasPorCliente)
         '- ${clientes[venta.clienteId] ?? 'Cliente'}: ${miles(venta.pollos)} pollos, ${plata(venta.total)}',
     ],
+    '',
+    'Hecho con Mis pollos',
   ];
   return lineas.join('\n');
 }

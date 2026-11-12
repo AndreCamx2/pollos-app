@@ -10,6 +10,7 @@ import '../../../../compartido/diseno/encabezado_granja.dart';
 import '../../../../compartido/diseno/encabezado_maiz.dart';
 import '../../../../compartido/diseno/espacios.dart';
 import '../../../../compartido/diseno/estado_error.dart';
+import '../../../../compartido/diseno/gallo.dart';
 import '../../../../compartido/diseno/icono_modulo.dart';
 import '../../../../compartido/diseno/pulsable.dart';
 import '../../../../compartido/diseno/tarjeta_ticket.dart';
@@ -259,6 +260,8 @@ class _SinGalpones extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const Gallo(tamano: 96, gesto: Gesto.dormido),
+            const SizedBox(height: e12),
             Text('Todavía no hay galpones', style: textos.titleLarge),
             const SizedBox(height: e4),
             Text(

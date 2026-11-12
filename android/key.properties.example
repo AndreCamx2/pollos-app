@@ -1,0 +1,4 @@
+storePassword=LA-CLAVE-DEL-ALMACEN
+keyPassword=LA-CLAVE-DE-LA-LLAVE
+keyAlias=pollos
+storeFile=C:\\Users\\andre\\claves\\pollos-firma.jks

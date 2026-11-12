@@ -127,7 +127,7 @@ class _PantallaFormularioMarcaState extends ConsumerState<PantallaFormularioMarc
                   CampoGranja(
                     etiqueta: 'Nombre de la marca',
                     controller: _nombre,
-                    pista: 'Ej.: Solla',
+                    pista: 'Ingresa el nombre de la marca',
                     mayusculas: TextCapitalization.words,
                     error: errorDe('nombre'),
                   ),
@@ -136,7 +136,7 @@ class _PantallaFormularioMarcaState extends ConsumerState<PantallaFormularioMarc
                     etiqueta: 'Kilos que trae el bulto',
                     controller: _kilos,
                     opcional: true,
-                    pista: 'Ej.: 40',
+                    pista: 'Ingresa los kilos del bulto',
                     ayuda: 'Se ponen solos al elegir la marca en una compra.',
                     teclado: const TextInputType.numberWithOptions(decimal: true),
                     formatos: soloDecimal,

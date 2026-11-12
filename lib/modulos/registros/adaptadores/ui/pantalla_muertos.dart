@@ -179,7 +179,7 @@ class _PantallaMuertosState extends ConsumerState<PantallaMuertos>
           etiqueta: 'Nota',
           controller: _nota,
           opcional: true,
-          pista: 'Ej.: amanecieron junto al bebedero del fondo',
+          pista: 'Ingresa algo que quieras recordar',
           mayusculas: TextCapitalization.sentences,
           lineas: 3,
         ),

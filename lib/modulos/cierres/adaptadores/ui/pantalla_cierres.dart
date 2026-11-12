@@ -10,6 +10,7 @@ import '../../../../compartido/diseno/encabezado_maiz.dart';
 import '../../../../compartido/diseno/espacios.dart';
 import '../../../../compartido/diseno/estado_error.dart';
 import '../../../../compartido/diseno/fichas.dart';
+import '../../../../compartido/diseno/gallo.dart';
 import '../../../../compartido/diseno/pulsable.dart';
 import '../../../../compartido/diseno/tarjeta_ticket.dart';
 import '../../../../compartido/diseno/tema.dart';
@@ -429,6 +430,8 @@ class _SinCierres extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            const Gallo(tamano: 96, gesto: Gesto.dormido),
+            const SizedBox(height: e12),
             Text(
               hayOtros ? 'Ningún lote cerrado en este periodo' : 'Todavía no has cerrado ningún lote',
               style: textos.titleLarge,
