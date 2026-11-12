@@ -28,6 +28,9 @@ String mensajeDeError(Object error) {
     if (error.code == 'same_password') {
       return 'La contraseña nueva debe ser distinta a la que te dieron.';
     }
+    if (error.statusCode == '429' || error.code == 'over_request_rate_limit') {
+      return 'Hiciste muchos intentos. Espera unos minutos y vuelve a probar.';
+    }
     return 'No se pudo entrar. Intenta de nuevo.';
   }
   if (error is PostgrestException) {
