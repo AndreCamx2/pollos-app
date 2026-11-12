@@ -3,6 +3,26 @@
 Cada versión corresponde a una parte del proyecto. El número de la derecha del
 `+` en `pubspec.yaml` sube con cada APK que se instala.
 
+## 0.5.1 · Marcas de alimento y validaciones
+
+- Marcas de alimento como lista propia: se eligen en un menú desplegable al
+  comprar, se crean ahí mismo y se corrigen o borran (una marca con compras
+  no se borra; se marca "Ya no la uso" y pasa al final). Al elegirla se
+  ponen sus kilos por bulto y el precio de su última compra. Corregir el
+  nombre de una marca lo corrige en todas sus compras.
+- Avisos de cifra rara: si un precio se aleja mucho de lo normal en la
+  granja (un cero de más o de menos), la app pide revisarlo. No bloquea.
+- Topes para errores de dedo: pollitos, bultos, kilos, libras, metros y
+  precios con un máximo razonable.
+- Al salir de un formulario con algo escrito, pregunta antes de descartarlo.
+- El error aparece en rojo en el campo que está mal.
+- Aviso si se va a anotar algo que ya se anotó el mismo día en el lote.
+- Celular del cliente: 10 números que empiecen por 3.
+- Un abono no puede tener fecha anterior a la primera venta fiada.
+- Base de datos: migración `20261112000000_marcas_y_fechas.sql` (lista de
+  marcas a partir de las compras que ya había, y ninguna fecha más de un día
+  en el futuro, por si el reloj del celular está corrido).
+
 ## 0.5.0 · Clientes, ventas y fiado
 
 - Barra de abajo para pasar entre Galpones y Clientes.
