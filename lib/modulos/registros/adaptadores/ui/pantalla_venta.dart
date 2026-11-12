@@ -270,7 +270,7 @@ class _PantallaVentaState extends ConsumerState<PantallaVenta>
               child: CampoGranja(
                 etiqueta: 'Pollos',
                 controller: _pollos,
-                pista: 'Ej.: 10',
+                pista: 'Ingresa los pollos',
                 teclado: TextInputType.number,
                 formatos: soloCantidad,
                 error: errorDe('pollos'),
@@ -281,7 +281,7 @@ class _PantallaVentaState extends ConsumerState<PantallaVenta>
               child: CampoGranja(
                 etiqueta: 'Libras en total',
                 controller: _libras,
-                pista: 'Ej.: 50,5',
+                pista: 'Ingresa las libras',
                 teclado: const TextInputType.numberWithOptions(decimal: true),
                 formatos: soloDecimal,
                 error: errorDe('libras'),
@@ -293,7 +293,7 @@ class _PantallaVentaState extends ConsumerState<PantallaVenta>
         CampoGranja(
           etiqueta: 'Precio por libra',
           controller: _precio,
-          pista: 'Ej.: 5.600',
+          pista: 'Ingresa el precio por libra',
           teclado: TextInputType.number,
           formatos: const [MilesAlEscribir()],
           error: errorDe('precio'),
