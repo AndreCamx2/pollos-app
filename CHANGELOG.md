@@ -3,6 +3,16 @@
 Cada versión corresponde a una parte del proyecto. El número de la derecha del
 `+` en `pubspec.yaml` sube con cada APK que se instala.
 
+## 1.1.0 · Cartera
+
+- Cada cliente puede tener un cupo de fiado. Si una venta fiada lo pasa, la
+  app avisa en cuánto, pero deja guardarla. El cliente muestra cuánto cupo le
+  queda.
+- Al fiarle a un cliente no recurrente sale un aviso.
+- Desde el cliente se le escribe por WhatsApp o se le llama. Si debe, el
+  mensaje ya lleva el saldo escrito.
+- Base de datos: migración `20261116000000_cupo_de_fiado.sql`.
+
 ## 1.0.1 · Arreglos y calendario
 
 - La fecha se elige en un calendario: se toca y sale el mes completo. Las
