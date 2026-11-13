@@ -265,7 +265,7 @@ class _DetalleCliente extends ConsumerWidget {
         (
           venta.fecha,
           _FilaMovimiento(
-            titulo: 'Venta · ${fechaCorta(venta.fecha)}',
+            titulo: 'Venta · ${fechaConAnio(venta.fecha)}',
             detalle: [
               ?nombreGalpon[galponDeLote[venta.loteId]],
               '${venta.pollos} ${venta.pollos == 1 ? 'pollo' : 'pollos'}, ${decimal(venta.libras)} lb',
@@ -278,7 +278,7 @@ class _DetalleCliente extends ConsumerWidget {
         (
           abono.fecha,
           _FilaMovimiento(
-            titulo: 'Abono · ${fechaCorta(abono.fecha)}',
+            titulo: 'Abono · ${fechaConAnio(abono.fecha)}',
             detalle: switch (abono.recibidoPor) {
               final id? when id == miId => 'Recibiste tú',
               final id? when nombres[id] != null => 'Recibió ${nombres[id]}',
@@ -559,8 +559,8 @@ class _BotonNuevoCliente extends StatelessWidget {
     return Pulsable(
       onTap: alTocar,
       child: Container(
-        height: 56,
-        padding: const EdgeInsets.symmetric(horizontal: e20),
+        constraints: const BoxConstraints(minHeight: 56),
+        padding: const EdgeInsets.symmetric(horizontal: e20, vertical: e12),
         decoration: BoxDecoration(
           color: ColoresGranja.granero,
           borderRadius: BorderRadius.circular(18),

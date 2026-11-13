@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/proveedores.dart';
 import '../../../../app/sincronizacion.dart';
 import '../../../../compartido/diseno/barra_etapa.dart';
+import '../../../../compartido/diseno/cargando.dart';
 import '../../../../compartido/diseno/colores.dart';
 import '../../../../compartido/diseno/encabezado_maiz.dart';
 import '../../../../compartido/diseno/espacios.dart';
@@ -37,7 +38,7 @@ class PantallaGalpon extends ConsumerWidget {
     final granja = ref.watch(granjaActualProvider);
     final galpones = ref.watch(galponesProvider).asData?.value;
     if (granja == null || galpones == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: Cargando());
     }
     final encontrado = galpones.where((g) => g.galpon.id == galponId).firstOrNull;
     if (encontrado == null) return const _GalponBorrado();
@@ -646,7 +647,7 @@ class _FilaMovimiento extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(titulo, style: textos.titleMedium, maxLines: 2),
-                  Text('${fechaCorta(registro.fecha)} · $quien', style: textos.bodySmall),
+                  Text('${fechaConAnio(registro.fecha)} · $quien', style: textos.bodySmall),
                 ],
               ),
             ),
@@ -779,8 +780,8 @@ class _FilaLoteAnterior extends StatelessWidget {
               children: [
                 Text(
                   cierre == null
-                      ? 'Del ${fechaCorta(lote.fechaLlegada)}'
-                      : 'Del ${fechaCorta(lote.fechaLlegada)} al ${fechaCorta(cierre.toLocal())}',
+                      ? 'Del ${fechaConAnio(lote.fechaLlegada)}'
+                      : 'Del ${fechaConAnio(lote.fechaLlegada)} al ${fechaConAnio(cierre.toLocal())}',
                   style: textos.titleMedium,
                 ),
                 Text(

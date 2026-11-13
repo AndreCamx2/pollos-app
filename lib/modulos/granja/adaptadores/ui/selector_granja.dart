@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/proveedores.dart';
 import '../../../../compartido/diseno/colores.dart';
+import '../../../../compartido/diseno/espacios.dart';
 import '../../../../compartido/diseno/movimiento.dart';
 import '../../../../compartido/diseno/pulsable.dart';
 import '../../dominio/granja.dart';
@@ -29,23 +30,23 @@ class _SelectorGranja extends ConsumerWidget {
     final actual = ref.watch(granjaActualProvider);
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+        padding: const EdgeInsets.fromLTRB(e20, 0, e20, e16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Tus granjas', style: textos.titleLarge),
-            const SizedBox(height: 12),
+            const SizedBox(height: e12),
             for (final granja in granjas)
               Padding(
-                padding: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.only(bottom: e8),
                 child: Pulsable(
                   onTap: () {
                     ref.read(granjaElegidaProvider.notifier).elegir(granja.id);
                     Navigator.pop(context);
                   },
                   child: Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(e16),
                     decoration: BoxDecoration(
                       color: ColoresGranja.papel,
                       borderRadius: BorderRadius.circular(18),

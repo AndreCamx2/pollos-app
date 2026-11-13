@@ -103,7 +103,7 @@ class _CampoGranjaState extends State<CampoGranja> {
           decoration: InputDecoration(
             hintText: widget.pista,
             hintStyle: conPeso(
-              textos.bodyLarge!.copyWith(color: ColoresGranja.tintaSuave),
+              textos.bodyLarge!.copyWith(color: ColoresGranja.pista),
               400,
             ),
             helperText: widget.ayuda,

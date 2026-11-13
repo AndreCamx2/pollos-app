@@ -75,6 +75,7 @@ ThemeData temaGranja() {
         borderSide: const BorderSide(color: ColoresGranja.granero, width: 2),
       ),
       errorStyle: conPeso(cuerpo.copyWith(fontSize: 13, color: ColoresGranja.granero), 600),
+      hintStyle: const TextStyle(color: ColoresGranja.pista),
       labelStyle: const TextStyle(color: ColoresGranja.tintaSuave),
       floatingLabelStyle: const TextStyle(color: ColoresGranja.tinta),
     ),
@@ -93,6 +94,12 @@ ThemeData temaGranja() {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: ColoresGranja.tinta,
+      contentTextStyle: conPeso(cuerpo.copyWith(fontSize: 15, color: ColoresGranja.crema), 600),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
     ),
     progressIndicatorTheme: const ProgressIndicatorThemeData(
       color: ColoresGranja.granero,

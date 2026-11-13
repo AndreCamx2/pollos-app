@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../app/proveedores.dart';
 import '../../../../compartido/diseno/campo.dart';
 import '../../../../compartido/diseno/colores.dart';
+import '../../../../compartido/diseno/espacios.dart';
 import '../../../../compartido/diseno/gallo.dart';
 import '../../../../compartido/diseno/pulsable.dart';
 import '../../../../compartido/diseno/tema.dart';
@@ -46,7 +47,7 @@ class PantallaSinGranja extends ConsumerWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            padding: const EdgeInsets.fromLTRB(e20, e16, e20, e24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -61,7 +62,7 @@ class PantallaSinGranja extends ConsumerWidget {
                       await db.rpc('crear_granja', params: {'nombre_granja': nombre})
                           as String,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: e16),
                 _Opcion(
                   titulo: 'Unirme con un código',
                   ayuda: 'El dueño o el administrador te lo da desde Personas.',
@@ -74,7 +75,7 @@ class PantallaSinGranja extends ConsumerWidget {
                       await db.rpc('unirse_con_codigo', params: {'codigo_recibido': codigo})
                           as String,
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: e16),
                 Center(
                   child: TextButton(
                     onPressed: () => ref.read(supabaseProvider).auth.signOut(),
@@ -153,7 +154,7 @@ class _OpcionState extends ConsumerState<_Opcion> {
   Widget build(BuildContext context) {
     final textos = Theme.of(context).textTheme;
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(e20),
       decoration: BoxDecoration(
         color: ColoresGranja.papel,
         borderRadius: BorderRadius.circular(24),
@@ -163,9 +164,9 @@ class _OpcionState extends ConsumerState<_Opcion> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(widget.titulo, style: textos.titleLarge),
-          const SizedBox(height: 4),
+          const SizedBox(height: e4),
           Text(widget.ayuda, style: textos.bodySmall),
-          const SizedBox(height: 16),
+          const SizedBox(height: e16),
           CampoGranja(
             etiqueta: widget.etiqueta,
             controller: _campo,
@@ -177,7 +178,7 @@ class _OpcionState extends ConsumerState<_Opcion> {
             alTerminar: (_) => _enviar(),
             error: _error,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: e16),
           BotonPrincipal(texto: widget.boton, cargando: _enviando, onPressed: _enviar),
         ],
       ),

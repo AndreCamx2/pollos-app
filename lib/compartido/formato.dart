@@ -29,6 +29,13 @@ String decimal(num numero) {
 /// "10 oct"
 String fechaCorta(DateTime fecha) => '${fecha.day} ${_meses[fecha.month - 1]}';
 
+/// Para listas y títulos donde caben fechas viejas: "10 oct" si es de este
+/// año y "10 oct 2025" si no.
+String fechaConAnio(DateTime fecha, {DateTime? hoy}) {
+  final corta = fechaCorta(fecha);
+  return fecha.year == (hoy ?? DateTime.now()).year ? corta : '$corta ${fecha.year}';
+}
+
 /// Para indicadores finos como la conversión: 2.183 -> "2,18".
 String dosDecimales(num numero) => numero.toStringAsFixed(2).replaceAll('.', ',');
 

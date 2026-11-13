@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../app/proveedores.dart';
+import '../../../../compartido/diseno/cargando.dart';
 import '../../../../compartido/diseno/colores.dart';
 import '../../../../compartido/diseno/encabezado_maiz.dart';
 import '../../../../compartido/diseno/espacios.dart';
@@ -31,7 +32,7 @@ class PantallaCierreLote extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cuentas = ref.watch(cuentasDeLoteProvider(loteId));
     if (cuentas == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: Cargando());
     }
     final lote = cuentas.lote;
     final hoy = DateTime.now();
@@ -60,8 +61,8 @@ class PantallaCierreLote extends ConsumerWidget {
             child: TitularPantalla(
               titulo: '${cierre == null ? 'Cómo va' : 'Cierre'} · $galpon',
               subtitulo: cierre == null
-                  ? 'Llegaron el ${fechaCorta(lote.fechaLlegada)} · día $dias'
-                  : 'Lote del ${fechaCorta(lote.fechaLlegada)} al ${fechaCorta(cierre)} · $dias días',
+                  ? 'Llegaron el ${fechaConAnio(lote.fechaLlegada)} · día $dias'
+                  : 'Lote del ${fechaConAnio(lote.fechaLlegada)} al ${fechaConAnio(cierre)} · $dias días',
             ),
           ),
           if (teDeben > 0)

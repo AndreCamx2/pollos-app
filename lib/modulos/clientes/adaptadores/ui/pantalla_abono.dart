@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/proveedores.dart';
 import '../../../../app/sincronizacion.dart';
 import '../../../../compartido/diseno/campo.dart';
+import '../../../../compartido/diseno/cargando.dart';
 import '../../../../compartido/diseno/colores.dart';
 import '../../../../compartido/diseno/encabezado_maiz.dart';
 import '../../../../compartido/diseno/espacios.dart';
@@ -112,7 +113,7 @@ class _PantallaAbonoState extends ConsumerState<PantallaAbono>
   Widget build(BuildContext context) {
     final cuenta = ref.watch(cuentaClienteProvider(widget.clienteId));
     if (cuenta == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: Cargando());
     }
     final cliente = cuenta.cliente;
     final original = _original;

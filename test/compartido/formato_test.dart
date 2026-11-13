@@ -26,6 +26,12 @@ void main() {
     expect(fechaCorta(DateTime(2026, 9, 17)), '17 sep');
   });
 
+  test('las fechas de otro año dicen el año', () {
+    final hoy = DateTime(2026, 11, 13);
+    expect(fechaConAnio(DateTime(2026, 1, 5), hoy: hoy), '5 ene');
+    expect(fechaConAnio(DateTime(2025, 12, 20), hoy: hoy), '20 dic 2025');
+  });
+
   test('lee lo que la persona escribe, con puntos, comas o espacios', () {
     expect(leerEntero('1.750.000'), 1750000);
     expect(leerEntero(''), isNull);

@@ -351,7 +351,7 @@ class _TarjetaCierre extends StatelessWidget {
                     children: [
                       Text(galpon, style: textos.titleMedium),
                       Text(
-                        '${fechaCorta(lote.fechaLlegada)} – ${fechaCorta(lote.cerradoEn!.toLocal())}'
+                        '${fechaConAnio(lote.fechaLlegada)} – ${fechaConAnio(lote.cerradoEn!.toLocal())}'
                         ' · ${cuentas.dias(DateTime.now())} días',
                         style: textos.bodySmall,
                       ),
