@@ -336,6 +336,19 @@ class _PantallaVentaState extends ConsumerState<PantallaVenta>
             '${_debeSinEsta(cuenta) <= 0 ? 'Hoy está al día.' : 'Hoy debe ${plata(_debeSinEsta(cuenta))}.'}',
             style: textos.bodySmall,
           ),
+          if (cuenta.pasaDelCupo(_debeSinEsta(cuenta) + total) case final pasa?) ...[
+            const SizedBox(height: e8),
+            AvisoAtencion(
+              'Se pasa ${plata(pasa)} del cupo de ${plata(cuenta.cliente.cupoFiado!)} '
+              'que le pusiste a ${cuenta.cliente.nombre}.',
+            ),
+          ],
+          if (!cuenta.cliente.recurrente) ...[
+            const SizedBox(height: e8),
+            AvisoAtencion(
+              '${cuenta.cliente.nombre} no es cliente recurrente. Piénsalo antes de fiarle.',
+            ),
+          ],
         ],
       ],
       resumen: Column(
