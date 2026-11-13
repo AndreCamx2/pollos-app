@@ -29,7 +29,7 @@ void main() {
       expect(pasajera(codigo), isTrue, reason: '$codigo');
     }
     for (final codigo in ['P0001', '23505', '23503', '42501', '22P02', 'PGRST204']) {
-      expect(pasajera(codigo), isFalse, reason: '$codigo');
+      expect(pasajera(codigo), isFalse, reason: codigo);
     }
   });
 
