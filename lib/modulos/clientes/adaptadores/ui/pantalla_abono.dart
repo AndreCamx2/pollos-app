@@ -161,7 +161,7 @@ class _PantallaAbonoState extends ConsumerState<PantallaAbono>
                   etiqueta: 'Cuánto pagó',
                   controller: _valor,
                   error: errorDe('valor'),
-                  pista: 'Ingresa cuánto pagó',
+                  pista: 'Ej.: 200.000',
                   teclado: TextInputType.number,
                   formatos: const [MilesAlEscribir()],
                 ),

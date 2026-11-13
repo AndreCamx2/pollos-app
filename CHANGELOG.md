@@ -16,6 +16,8 @@ Cada versión corresponde a una parte del proyecto. El número de la derecha del
 - Cerrar sesión o salir de la granja avisa si hay cambios sin subir.
 - En libras, kilos y metros el punto de miles se lee bien: 1.250 son mil
   doscientas cincuenta, no una y cuarto.
+- Los campos vuelven a mostrar un ejemplo corto ("Ej.: 500") en vez de una
+  frase.
 - Base de datos: migración `20261115000000_no_borrar_en_lote_cerrado.sql`.
   En un lote cerrado tampoco se puede borrar lo anotado sin reabrirlo.
 

@@ -162,7 +162,7 @@ class _PantallaMedicinaState extends ConsumerState<PantallaMedicina>
         CampoGranja(
           etiqueta: 'Cuánto costó',
           controller: _costo,
-          pista: 'Ingresa cuánto costó',
+          pista: 'Ej.: 45.000',
           teclado: TextInputType.number,
           formatos: const [MilesAlEscribir()],
           error: errorDe('costo'),
@@ -177,7 +177,7 @@ class _PantallaMedicinaState extends ConsumerState<PantallaMedicina>
           etiqueta: 'Para qué o cómo se da',
           controller: _nota,
           opcional: true,
-          pista: 'Ingresa para qué es o cómo se da',
+          pista: 'Ej.: 1 sobre por galón de agua, 5 días',
           mayusculas: TextCapitalization.sentences,
           lineas: 3,
         ),

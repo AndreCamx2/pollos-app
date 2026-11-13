@@ -263,7 +263,7 @@ class _PantallaCompraAlimentoState extends ConsumerState<PantallaCompraAlimento>
               child: CampoGranja(
                 etiqueta: 'Bultos',
                 controller: _bultos,
-                pista: 'Ingresa los bultos',
+                pista: 'Ej.: 10',
                 teclado: TextInputType.number,
                 formatos: soloCantidad,
                 error: errorDe('bultos'),
@@ -274,7 +274,7 @@ class _PantallaCompraAlimentoState extends ConsumerState<PantallaCompraAlimento>
               child: CampoGranja(
                 etiqueta: 'Kilos por bulto',
                 controller: _kilos,
-                pista: 'Ingresa los kilos',
+                pista: 'Ej.: 40',
                 teclado: const TextInputType.numberWithOptions(decimal: true),
                 formatos: soloDecimal,
                 error: errorDe('kilos'),
@@ -286,7 +286,7 @@ class _PantallaCompraAlimentoState extends ConsumerState<PantallaCompraAlimento>
         CampoGranja(
           etiqueta: 'Precio por bulto',
           controller: _precio,
-          pista: 'Ingresa el precio por bulto',
+          pista: 'Ej.: 104.000',
           teclado: TextInputType.number,
           formatos: const [MilesAlEscribir()],
           error: errorDe('precio'),
