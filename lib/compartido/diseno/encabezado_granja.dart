@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../formato.dart';
 import 'colores.dart';
 import 'espacios.dart';
 import 'gallo.dart';
@@ -68,9 +69,5 @@ class EncabezadoGranja extends StatelessWidget {
 
 String fechaLarga(DateTime fecha) {
   const dias = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
-  const meses = [
-    'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio',
-    'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
-  ];
-  return '${dias[fecha.weekday - 1]} ${fecha.day} de ${meses[fecha.month - 1]}';
+  return '${dias[fecha.weekday - 1]} ${fecha.day} de ${mesLargo(fecha)}';
 }
