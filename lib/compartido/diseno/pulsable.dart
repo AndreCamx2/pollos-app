@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'colores.dart';
+import 'espacios.dart';
 import 'movimiento.dart';
 import 'tema.dart';
 
@@ -66,9 +67,11 @@ class BotonPrincipal extends StatelessWidget {
         opacity: onPressed == null ? 0.45 : 1,
         duration: const Duration(milliseconds: 150),
         child: Container(
-          height: 56,
+          // Alto mínimo y no fijo: con la letra grande el texto baja a dos
+          // renglones y el botón crece con él.
+          constraints: const BoxConstraints(minHeight: 56),
           width: double.infinity,
-          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: e16, vertical: e12),
           decoration: BoxDecoration(
             color: ColoresGranja.granero,
             borderRadius: BorderRadius.circular(18),
@@ -80,25 +83,29 @@ class BotonPrincipal extends StatelessWidget {
               ),
             ],
           ),
-          child: cargando
-              ? const SizedBox.square(
-                  dimension: 22,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2.4,
-                    color: ColoresGranja.papel,
-                  ),
-                )
-              : Text(
-                  texto,
-                  style: conPeso(
-                    const TextStyle(
-                      fontFamily: 'Figtree',
-                      fontSize: 18,
+          child: Center(
+            heightFactor: 1,
+            child: cargando
+                ? const SizedBox.square(
+                    dimension: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.4,
                       color: ColoresGranja.papel,
                     ),
-                    700,
+                  )
+                : Text(
+                    texto,
+                    textAlign: TextAlign.center,
+                    style: conPeso(
+                      const TextStyle(
+                        fontFamily: 'Figtree',
+                        fontSize: 18,
+                        color: ColoresGranja.papel,
+                      ),
+                      700,
+                    ),
                   ),
-                ),
+          ),
         ),
       ),
     );
@@ -117,23 +124,27 @@ class BotonSecundario extends StatelessWidget {
     return Pulsable(
       onTap: onPressed,
       child: Container(
-        height: 56,
+        constraints: const BoxConstraints(minHeight: 56),
         width: double.infinity,
-        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: e16, vertical: e12),
         decoration: BoxDecoration(
           color: ColoresGranja.papel,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: ColoresGranja.tinta, width: 2),
         ),
-        child: Text(
-          texto,
-          style: conPeso(
-            const TextStyle(
-              fontFamily: 'Figtree',
-              fontSize: 18,
-              color: ColoresGranja.tinta,
+        child: Center(
+          heightFactor: 1,
+          child: Text(
+            texto,
+            textAlign: TextAlign.center,
+            style: conPeso(
+              const TextStyle(
+                fontFamily: 'Figtree',
+                fontSize: 18,
+                color: ColoresGranja.tinta,
+              ),
+              700,
             ),
-            700,
           ),
         ),
       ),

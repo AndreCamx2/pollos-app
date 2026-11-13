@@ -31,8 +31,8 @@ class BarraSecciones extends StatelessWidget {
         ),
         child: SafeArea(
           top: false,
-          child: SizedBox(
-            height: 68,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 68),
             child: Row(
               children: [
                 for (final (camino, nombre, figura) in _secciones)
@@ -42,7 +42,7 @@ class BarraSecciones extends StatelessWidget {
                       child: Pulsable(
                         onTap: ruta == camino ? null : () => context.go(camino),
                         child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             IconoModulo(
                               figura,

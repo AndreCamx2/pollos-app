@@ -28,6 +28,9 @@ abstract final class ColoresGranja {
   static const cresta = Color(0xFFD63A22);
   static const pico = Color(0xFFF08A24);
 
+  /// El ejemplo dentro de un campo vacío: se lee, pero no parece un dato.
+  static const pista = Color(0xFFA89B8F);
+
   static const crema = Color(0xFFFBF5EC);
   static const papel = Color(0xFFFFFFFF);
   static const borde = Color(0x1F2B211A);

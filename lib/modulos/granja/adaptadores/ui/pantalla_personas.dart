@@ -5,7 +5,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../app/proveedores.dart';
 import '../../../../app/sincronizacion.dart';
+import '../../../../compartido/diseno/cargando.dart';
 import '../../../../compartido/diseno/colores.dart';
+import '../../../../compartido/diseno/espacios.dart';
 import '../../../../compartido/diseno/encabezado_maiz.dart';
 import '../../../../compartido/diseno/estado_error.dart';
 import '../../../../compartido/diseno/hoja_confirmar.dart';
@@ -22,14 +24,14 @@ class PantallaPersonas extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final granja = ref.watch(granjaActualProvider);
-    if (granja == null) return const Scaffold();
+    if (granja == null) return const Scaffold(body: Cargando());
     final miId = ref.watch(usuarioIdProvider);
     final miembros = ref.watch(miembrosProvider(granja.id));
     final cuantos = miembros.asData?.value.length;
 
     return Scaffold(
       body: ListView(
-        padding: const EdgeInsets.only(bottom: 24),
+        padding: const EdgeInsets.only(bottom: e24),
         children: [
           EncabezadoMaiz(
             child: TitularPantalla(
@@ -40,12 +42,7 @@ class PantallaPersonas extends ConsumerWidget {
             ),
           ),
           ...miembros.when<List<Widget>>(
-            loading: () => const [
-              Padding(
-                padding: EdgeInsets.all(24),
-                child: Center(child: CircularProgressIndicator()),
-              ),
-            ],
+            loading: () => const [Cargando()],
             error: (error, _) => [
               EstadoError(
                 error: error,
@@ -54,14 +51,14 @@ class PantallaPersonas extends ConsumerWidget {
             ],
             data: (miembros) => [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                padding: const EdgeInsets.fromLTRB(e16, e8, e16, 0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Container(
                       decoration: BoxDecoration(
                         color: ColoresGranja.papel,
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(radioTarjeta),
                         border: Border.all(color: ColoresGranja.borde),
                       ),
                       child: Column(
@@ -92,24 +89,20 @@ class PantallaPersonas extends ConsumerWidget {
                       ),
                     ),
                     if (granja.rol == Rol.dueno && miembros.length > 1) ...[
-                      const SizedBox(height: 12),
+                      const SizedBox(height: e12),
                       Text(
                         'Toca a una persona para cambiarle el rol o sacarla de la granja.',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],
                     if (granja.rol.administra) ...[
-                      const SizedBox(height: 24),
+                      const SizedBox(height: e24),
                       BotonPrincipal(
                         texto: 'Invitar a alguien',
                         onPressed: () => showModalBottomSheet<void>(
                           context: context,
                           isScrollControlled: true,
-                          sheetAnimationStyle: const AnimationStyle(
-                            curve: Curvas.hoja,
-                            duration: Duration(milliseconds: 280),
-                            reverseDuration: Duration(milliseconds: 220),
-                          ),
+                          sheetAnimationStyle: animacionDeHoja,
                           builder: (_) => _HojaInvitar(granjaId: granja.id),
                         ),
                       ),
@@ -205,7 +198,7 @@ class _FilaMiembro extends StatelessWidget {
     return Pulsable(
       onTap: alTocar,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(e16),
         child: Row(
           children: [
             SizedBox.square(
@@ -228,7 +221,7 @@ class _FilaMiembro extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: e12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -321,13 +314,13 @@ class _HojaMiembroState extends ConsumerState<_HojaMiembro> {
     final db = ref.read(supabaseProvider);
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+        padding: const EdgeInsets.fromLTRB(e20, 0, e20, e16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(widget.miembro.nombre ?? 'Aún no ha entrado', style: textos.titleLarge),
-            const SizedBox(height: 12),
+            const SizedBox(height: e12),
             for (final rol in Rol.values) ...[
               _OpcionRol(
                 rol: rol,
@@ -335,13 +328,13 @@ class _HojaMiembroState extends ConsumerState<_HojaMiembro> {
                 elegido: _rol,
                 alElegir: (rol) => setState(() => _rol = rol),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: e8),
             ],
             if (_error case final error?) ...[
-              const SizedBox(height: 4),
+              const SizedBox(height: e4),
               AvisoError(error),
             ],
-            const SizedBox(height: 12),
+            const SizedBox(height: e12),
             BotonPrincipal(
               texto: 'Guardar el rol',
               cargando: _guardando,
@@ -351,7 +344,7 @@ class _HojaMiembroState extends ConsumerState<_HojaMiembro> {
                         () => _fila(db.from('miembros').update({'rol': _rol.name})).select(),
                       ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: e4),
             TextButton(
               onPressed: _guardando ? null : _sacar,
               style: TextButton.styleFrom(foregroundColor: ColoresGranja.granero),
@@ -425,14 +418,14 @@ class _HojaInvitarState extends ConsumerState<_HojaInvitar> {
           children: codigo == null
               ? [
                   Text('¿Qué va a hacer?', style: textos.titleLarge),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: e12),
                   _OpcionRol(
                     rol: Rol.trabajador,
                     ayuda: _queHace[Rol.trabajador]!,
                     elegido: _rol,
                     alElegir: (rol) => setState(() => _rol = rol),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: e8),
                   _OpcionRol(
                     rol: Rol.administrador,
                     ayuda: _queHace[Rol.administrador]!,
@@ -440,28 +433,28 @@ class _HojaInvitarState extends ConsumerState<_HojaInvitar> {
                     alElegir: (rol) => setState(() => _rol = rol),
                   ),
                   if (_error case final error?) ...[
-                    const SizedBox(height: 12),
+                    const SizedBox(height: e12),
                     AvisoError(error),
                   ],
-                  const SizedBox(height: 20),
+                  const SizedBox(height: e20),
                   BotonPrincipal(texto: 'Crear código', cargando: _creando, onPressed: _crearCodigo),
                 ]
               : [
                   Text('Pásale este código', style: textos.titleLarge),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: e4),
                   Text(
                     'Entra a la app y lo escribe en "Unirme con un código". '
                     'Sirve una sola vez y vence en 7 días.',
                     style: textos.bodySmall,
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: e20),
                   Center(
                     child: SelectableText(
                       codigo,
                       style: textos.displaySmall!.copyWith(letterSpacing: 6),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: e20),
                   BotonPrincipal(
                     texto: _copiado ? 'Copiado' : 'Copiar código',
                     onPressed: () => _copiar(codigo),
@@ -497,7 +490,7 @@ class _OpcionRol extends StatelessWidget {
         onTap: () => alElegir(rol),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(e16),
           decoration: BoxDecoration(
             color: ColoresGranja.papel,
             borderRadius: BorderRadius.circular(18),

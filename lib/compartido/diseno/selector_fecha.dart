@@ -46,7 +46,7 @@ class SelectorFecha extends StatelessWidget {
     }
 
     return Container(
-      height: 56,
+      constraints: const BoxConstraints(minHeight: 56),
       decoration: BoxDecoration(
         color: ColoresGranja.papel,
         borderRadius: BorderRadius.circular(radioCampo),
@@ -66,7 +66,8 @@ class SelectorFecha extends StatelessWidget {
               label: 'Abrir el calendario',
               child: Pulsable(
                 onTap: abrirCalendario,
-                child: SizedBox.expand(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 56),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -81,9 +82,10 @@ class SelectorFecha extends StatelessWidget {
                           switch (haceDias) {
                             0 => 'Hoy, $corta',
                             1 => 'Ayer, $corta',
-                            _ => '$corta · hace $haceDias días',
+                            <= 7 => '$corta · hace $haceDias días',
+                            _ => fechaConAnio(elegida),
                           },
-                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
                           style: conPeso(Theme.of(context).textTheme.bodyLarge!, 700),
                         ),
                       ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../errores.dart';
 import 'colores.dart';
+import 'espacios.dart';
 import 'gallo.dart';
 import 'pulsable.dart';
 import 'tema.dart';
@@ -26,13 +27,13 @@ class EstadoError extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Gallo(tamano: 96, gesto: Gesto.duda),
-            const SizedBox(height: 12),
+            const SizedBox(height: e12),
             Text(
               mensajeDeError(error),
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyLarge,
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: e20),
             BotonPrincipal(texto: 'Intentar de nuevo', onPressed: alReintentar),
           ],
         ),
@@ -74,7 +75,7 @@ class AvisoAtencion extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      padding: const EdgeInsets.all(e12),
       decoration: BoxDecoration(
         color: ColoresGranja.maizClaro,
         borderRadius: BorderRadius.circular(12),

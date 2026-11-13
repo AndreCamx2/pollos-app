@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/aviso_sincronizacion.dart';
 import '../../../../app/proveedores.dart';
 import '../../../../compartido/diseno/barra_etapa.dart';
+import '../../../../compartido/diseno/cargando.dart';
 import '../../../../compartido/diseno/colores.dart';
 import '../../../../compartido/diseno/encabezado_granja.dart';
 import '../../../../compartido/diseno/encabezado_maiz.dart';
@@ -27,7 +28,7 @@ class PantallaGalpones extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final granja = ref.watch(granjaActualProvider);
-    if (granja == null) return const Scaffold();
+    if (granja == null) return const Scaffold(body: Cargando());
     final variasGranjas = (ref.watch(misGranjasProvider).asData?.value.length ?? 0) > 1;
     final galpones = ref.watch(galponesProvider);
     final cargados = galpones.asData?.value ?? const <GalponConLote>[];
@@ -63,12 +64,7 @@ class PantallaGalpones extends ConsumerWidget {
           ),
           ...galpones.when<List<Widget>>(
             skipLoadingOnReload: true,
-            loading: () => const [
-              Padding(
-                padding: EdgeInsets.all(e24),
-                child: Center(child: CircularProgressIndicator()),
-              ),
-            ],
+            loading: () => const [Cargando()],
             error: (error, _) => [
               EstadoError(
                 error: error,
@@ -294,8 +290,8 @@ class _BotonNuevoLote extends StatelessWidget {
     return Pulsable(
       onTap: alTocar,
       child: Container(
-        height: 56,
-        padding: const EdgeInsets.symmetric(horizontal: e20),
+        constraints: const BoxConstraints(minHeight: 56),
+        padding: const EdgeInsets.symmetric(horizontal: e20, vertical: e12),
         decoration: BoxDecoration(
           color: ColoresGranja.granero,
           borderRadius: BorderRadius.circular(18),

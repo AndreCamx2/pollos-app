@@ -16,6 +16,14 @@ Cada versión corresponde a una parte del proyecto. El número de la derecha del
 - Cerrar sesión o salir de la granja avisa si hay cambios sin subir.
 - En libras, kilos y metros el punto de miles se lee bien: 1.250 son mil
   doscientas cincuenta, no una y cuarto.
+- Los campos vuelven a mostrar un ejemplo corto ("Ej.: 500") en vez de una
+  frase, y en un gris más claro para que no parezca un dato ya escrito.
+- Con la letra del celular grande, los botones, la barra de abajo y la fecha
+  crecen en vez de cortarse. La letra de la app sube hasta un 30 %.
+- Las fechas de otro año dicen el año, y después de una semana ya no dicen
+  "hace tantos días".
+- El gallo aparece mientras carga cada pantalla, en vez de la rueda gris o un
+  instante en blanco.
 - Base de datos: migración `20261115000000_no_borrar_en_lote_cerrado.sql`.
   En un lote cerrado tampoco se puede borrar lo anotado sin reabrirlo.
 

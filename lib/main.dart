@@ -38,6 +38,12 @@ class AppPollos extends ConsumerWidget {
       theme: temaGranja(),
       routerConfig: ref.watch(rutasProvider),
       debugShowCheckedModeBanner: false,
+      // La letra crece con la del celular hasta un 30 %. Más arriba las
+      // cifras grandes y las tarjetas dejan de caber en pantallas angostas.
+      builder: (context, pantalla) => MediaQuery.withClampedTextScaling(
+        maxScaleFactor: 1.3,
+        child: pantalla!,
+      ),
     );
   }
 }
