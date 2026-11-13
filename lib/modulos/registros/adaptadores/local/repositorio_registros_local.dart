@@ -71,7 +71,7 @@ class RepositorioRegistrosLocal {
           granjaId: granjaId,
           loteId: f['lote_id']! as String,
           fecha: DateTime.parse(f['fecha']! as String),
-          tipo: TipoAlimento.values.byName(f['tipo']! as String),
+          tipo: TipoAlimento.values.asNameMap()[f['tipo']] ?? TipoAlimento.engorde,
           marca: f['marca']! as String,
           marcaId: f['marca_id'] as String?,
           kilosPorBulto: (f['kilos_por_bulto']! as num).toDouble(),
@@ -88,7 +88,8 @@ class RepositorioRegistrosLocal {
           fecha: DateTime.parse(f['fecha']! as String),
           cantidad: f['cantidad']! as int,
           causa: switch (f['causa']) {
-            final String causa => CausaMuerte.values.byName(causa),
+            // Una causa que estrenó una versión más nueva de la app.
+            final String causa => CausaMuerte.values.asNameMap()[causa] ?? CausaMuerte.otra,
             _ => null,
           },
           nota: f['nota'] as String?,
