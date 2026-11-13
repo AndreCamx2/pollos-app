@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../app/aviso_sincronizacion.dart';
 import '../../../../app/proveedores.dart';
@@ -296,6 +297,7 @@ class _DetalleCliente extends ConsumerWidget {
     final puedeCorregir = granja != null &&
         cliente.puedeCambiarlo(administra: granja.rol.administra, usuarioId: miId);
     final telefono = cliente.telefono;
+    final whatsApp = granja == null ? null : cuenta.enlaceWhatsApp(granja: granja.nombre);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(e16, 0, e16, e16),
@@ -303,9 +305,32 @@ class _DetalleCliente extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (telefono != null)
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: e8,
+              children: [
+                Text('Celular: $telefono', style: textos.bodyMedium),
+                if (whatsApp != null)
+                  TextButton(
+                    onPressed: () => _abrir(context, whatsApp),
+                    child: Text(cuenta.alDia ? 'WhatsApp' : 'Cobrar por WhatsApp'),
+                  ),
+                TextButton(
+                  onPressed: () =>
+                      _abrir(context, Uri(scheme: 'tel', path: telefono.replaceAll(' ', ''))),
+                  child: const Text('Llamar'),
+                ),
+              ],
+            ),
+          if (cliente.cupoFiado case final cupo?)
             Padding(
               padding: const EdgeInsets.only(bottom: e8),
-              child: Text('Celular: $telefono', style: textos.bodyMedium),
+              child: Text(
+                cuenta.debe > cupo
+                    ? 'Cupo de fiado: ${plata(cupo)}. Va pasado por ${plata(cuenta.debe - cupo)}.'
+                    : 'Cupo de fiado: ${plata(cupo)}. Le quedan ${plata(cupo - cuenta.debe)}.',
+                style: textos.bodyMedium,
+              ),
             ),
           if (movimientos.isEmpty)
             Text('Todavía no le has vendido nada.', style: textos.bodySmall)
@@ -352,6 +377,21 @@ class _DetalleCliente extends ConsumerWidget {
             ),
         ],
       ),
+    );
+  }
+}
+
+/// Abre WhatsApp o el teléfono del celular con el enlace.
+Future<void> _abrir(BuildContext context, Uri enlace) async {
+  var abrio = false;
+  try {
+    abrio = await launchUrl(enlace, mode: LaunchMode.externalApplication);
+  } on Exception {
+    // Un celular sin WhatsApp o sin teléfono no tiene con qué abrirlo.
+  }
+  if (!abrio && context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Este celular no tiene con qué abrirlo.')),
     );
   }
 }
