@@ -20,6 +20,9 @@ import '../modulos/registros/dominio/registro.dart';
 
 final supabaseProvider = Provider((ref) => Supabase.instance.client);
 
+/// Un rol que esta versión no conoce se trata como el que menos puede.
+Rol _rol(Object? nombre) => Rol.values.asNameMap()[nombre] ?? Rol.trabajador;
+
 /// main() la abre antes de arrancar la app y la entrega aquí.
 final baseLocalProvider = Provider<BaseLocal>(
   (ref) => throw StateError('Falta abrir la base local en main().'),
@@ -104,13 +107,11 @@ final misGranjasProvider = FutureProvider<List<Granja>>((ref) async {
       (
         id: granja['id'] as String,
         nombre: granja['nombre'] as String,
-        rol: Rol.values.byName(granja['rol'] as String),
+        rol: _rol(granja['rol']),
       ),
   ];
 });
 
-// shortcut: la granja elegida se olvida al cerrar la app y se vuelve a la
-// primera; guardarla con shared_preferences si los dueños de varias lo piden.
 /// La granja que la persona eligió la última vez; queda guardada en el
 /// celular para abrir en esa.
 class GranjaElegida extends Notifier<String?> {
@@ -179,7 +180,7 @@ final miembrosProvider =
       (
         usuarioId: m['usuario_id'] as String,
         nombre: m['nombre'] as String?,
-        rol: Rol.values.byName(m['rol'] as String),
+        rol: _rol(m['rol']),
       ),
   ];
 });

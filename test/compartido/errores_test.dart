@@ -21,6 +21,18 @@ void main() {
     expect(mensajeDeError(error), 'Algo salió mal. Intenta de nuevo.');
   });
 
+  test('distingue el servidor caído de un dato que el servidor no acepta', () {
+    bool pasajera(String? codigo) =>
+        esFallaPasajera(PostgrestException(message: 'error', code: codigo));
+
+    for (final codigo in ['503', '429', 'PGRST301', 'PGRST002', '57014', '40001', null]) {
+      expect(pasajera(codigo), isTrue, reason: '$codigo');
+    }
+    for (final codigo in ['P0001', '23505', '23503', '42501', '22P02', 'PGRST204']) {
+      expect(pasajera(codigo), isFalse, reason: codigo);
+    }
+  });
+
   test('avisa cuando el nombre ya existe', () {
     final error = PostgrestException(message: 'duplicate key', code: '23505');
     expect(mensajeDeError(error), 'Ya existe uno con ese nombre.');

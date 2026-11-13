@@ -240,6 +240,10 @@ select pruebas.debe_fallar(
          :'granja'),
   'ya está cerrado');
 
+select pruebas.debe_fallar(
+  $s$delete from public.mortalidad where lote_id = '20000000-0000-0000-0000-000000000001'$s$,
+  'ya está cerrado');
+
 -- Lo que se borra queda anotado para los celulares que estaban sin señal.
 insert into public.galpones (id, granja_id, nombre)
 values ('10000000-0000-0000-0000-000000000002', :'granja', 'Galpón 2');
@@ -340,5 +344,9 @@ select pruebas.debe_fallar(
   'Ese código no sirve');
 
 reset role;
+select pruebas.igual(
+  pruebas.filas(format($s$delete from public.granjas where id = %L$s$, :'granja')),
+  1, 'una granja con lotes cerrados y registros se puede borrar completa');
+
 select 'TODAS LAS PRUEBAS PASARON' as resultado;
 rollback;

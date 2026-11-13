@@ -33,4 +33,13 @@ void main() {
     expect(leerDecimal(' 6 '), 6);
     expect(leerDecimal(''), isNull);
   });
+
+  test('en libras el punto de miles no se confunde con decimales', () {
+    expect(leerDecimal('1.250'), 1250);
+    expect(leerDecimal('1.250,5'), 1250.5);
+    expect(leerDecimal('12.345.678'), 12345678);
+    expect(leerDecimal('50.5'), 50.5);
+    expect(leerDecimal('245.75'), 245.75);
+    expect(leerDecimal('0.125'), 0.125);
+  });
 }

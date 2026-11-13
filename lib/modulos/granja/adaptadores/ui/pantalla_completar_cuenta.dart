@@ -72,13 +72,20 @@ class _PantallaCompletarCuentaState
     setState(() => _guardando = true);
     try {
       final db = ref.read(supabaseProvider);
+      final local = ref.read(baseLocalProvider);
+      final id = db.auth.currentUser!.id;
       final nombre = _nombre.text.trim().replaceAll(RegExp(r'\s+'), ' ');
-      // Primero el perfil (upsert) y al final la contraseña: si algo falla,
-      // la persona puede volver a tocar Guardar sin chocar con lo que ya quedó.
-      await db
-          .from('perfiles')
-          .upsert({'id': db.auth.currentUser!.id, 'nombre': nombre});
-      await db.auth.updateUser(UserAttributes(password: _clave.text));
+      // Primero la contraseña: con el nombre guardado la app ya deja entrar,
+      // y si la contraseña fallara después se quedaría la que dio el dueño.
+      // La marca deja volver a tocar Guardar si lo que falla es el nombre.
+      final marca = 'clave-cambiada:$id';
+      try {
+        await db.auth.updateUser(UserAttributes(password: _clave.text));
+      } on AuthException catch (e) {
+        if (e.code != 'same_password' || await local.leerDato(marca) != true) rethrow;
+      }
+      await local.guardarDato(marca, true);
+      await db.from('perfiles').upsert({'id': id, 'nombre': nombre});
       TextInput.finishAutofillContext();
       ref.invalidate(miNombreProvider);
     } catch (e) {
