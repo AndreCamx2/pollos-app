@@ -3,6 +3,22 @@
 Cada versión corresponde a una parte del proyecto. El número de la derecha del
 `+` en `pubspec.yaml` sube con cada APK que se instala.
 
+## 1.0.1 · Arreglos y calendario
+
+- La fecha se elige en un calendario: se toca y sale el mes completo. Las
+  flechas de un día siguen ahí para lo de ayer.
+- Si el servidor está caído u ocupado, los cambios esperan y suben solos
+  después, en vez de quedar como "no se pudo subir".
+- La app ya no se daña si una versión más nueva estrena una causa de muerte,
+  un tipo de alimento o un rol que esta no conoce.
+- La primera vez se guarda primero la contraseña y después el nombre, para
+  que nadie se quede con la contraseña que le dio el dueño.
+- Cerrar sesión o salir de la granja avisa si hay cambios sin subir.
+- En libras, kilos y metros el punto de miles se lee bien: 1.250 son mil
+  doscientas cincuenta, no una y cuarto.
+- Base de datos: migración `20261115000000_no_borrar_en_lote_cerrado.sql`.
+  En un lote cerrado tampoco se puede borrar lo anotado sin reabrirlo.
+
 ## 1.0.0 · Lista para usar con datos reales
 
 - Entrada nueva con el gallo de la app: cada error sale debajo de su campo, el
