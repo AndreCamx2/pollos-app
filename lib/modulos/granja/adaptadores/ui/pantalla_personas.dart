@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../app/proveedores.dart';
+import '../../../../app/sincronizacion.dart';
 import '../../../../compartido/diseno/colores.dart';
 import '../../../../compartido/diseno/encabezado_maiz.dart';
 import '../../../../compartido/diseno/estado_error.dart';
@@ -123,7 +124,7 @@ class PantallaPersonas extends ConsumerWidget {
                     ),
                     Center(
                       child: TextButton(
-                        onPressed: () => ref.read(supabaseProvider).auth.signOut(),
+                        onPressed: () => _cerrarSesion(context, ref),
                         child: const Text('Cerrar sesión'),
                       ),
                     ),
@@ -138,11 +139,36 @@ class PantallaPersonas extends ConsumerWidget {
   }
 }
 
+/// Lo que se anotó en este celular y todavía no está en el servidor.
+int _sinSubir(WidgetRef ref) {
+  final estado = ref.read(sincronizacionProvider);
+  return estado.porSubir + estado.rechazados;
+}
+
+String _cambios(int cuantos) => cuantos == 1 ? '1 cambio' : '$cuantos cambios';
+
+Future<void> _cerrarSesion(BuildContext context, WidgetRef ref) async {
+  final sinSubir = _sinSubir(ref);
+  if (sinSubir > 0) {
+    final cierra = await confirmar(
+      context,
+      titulo: '¿Cerrar sesión con ${_cambios(sinSubir)} sin subir?',
+      detalle: 'Se quedan en este celular y suben a nombre de quien entre '
+          'después. Mejor espera a tener señal y que diga "Al día".',
+      accion: 'Cerrar sesión',
+    );
+    if (!cierra) return;
+  }
+  await ref.read(supabaseProvider).auth.signOut();
+}
+
 Future<void> _salir(BuildContext context, WidgetRef ref, Granja granja) async {
+  final sinSubir = _sinSubir(ref);
   final sale = await confirmar(
     context,
     titulo: '¿Salir de ${granja.nombre}?',
-    detalle: 'Dejarás de ver sus galpones y sus cuentas. Para volver vas a '
+    detalle: '${sinSubir > 0 ? 'Tienes ${_cambios(sinSubir)} sin subir que se van a perder. ' : ''}'
+        'Dejarás de ver sus galpones y sus cuentas. Para volver vas a '
         'necesitar un código nuevo.',
     accion: 'Salir de la granja',
   );
