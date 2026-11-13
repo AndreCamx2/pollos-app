@@ -76,6 +76,13 @@ values ('20000000-0000-0000-0000-000000000001', :'granja', '10000000-0000-0000-0
         '2026-09-17', 500, 1750000);
 insert into public.clientes (id, granja_id, nombre, detalle)
 values ('30000000-0000-0000-0000-000000000001', :'granja', 'Doña Marta', 'Tienda La Esquina');
+
+-- El cupo de fiado es opcional, pero si se pone tiene que ser más de cero.
+update public.clientes set cupo_fiado = 500000 where id = '30000000-0000-0000-0000-000000000001';
+select pruebas.debe_fallar(
+  $s$update public.clientes set cupo_fiado = 0 where id = '30000000-0000-0000-0000-000000000001'$s$,
+  'cupo_fiado');
+
 insert into public.ventas (id, granja_id, lote_id, cliente_id, fecha, pollos, libras, precio_libra, total)
 values ('40000000-0000-0000-0000-000000000002', :'granja', '20000000-0000-0000-0000-000000000001',
         '30000000-0000-0000-0000-000000000001', '2026-10-09', 2, 10, 5400, 54000);
