@@ -32,6 +32,14 @@ String fechaCorta(DateTime fecha) => '${fecha.day} ${_meses[fecha.month - 1]}';
 /// Para indicadores finos como la conversión: 2.183 -> "2,18".
 String dosDecimales(num numero) => numero.toStringAsFixed(2).replaceAll('.', ',');
 
+const _mesesLargos = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio',
+  'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+];
+
+/// "octubre"
+String mesLargo(DateTime fecha) => _mesesLargos[fecha.month - 1];
+
 /// "oct"
 String mesCorto(DateTime fecha) => _meses[fecha.month - 1];
 
@@ -46,9 +54,16 @@ String millones(int pesos) {
 int? leerEntero(String texto) =>
     int.tryParse(texto.replaceAll(RegExp(r'\D'), ''));
 
-/// Lee metros o libras escritos con coma o con punto.
-double? leerDecimal(String texto) =>
-    double.tryParse(texto.trim().replaceAll(',', '.'));
+/// Lee metros o libras escritos con coma o con punto. El punto seguido de
+/// tres cifras es de miles, como en la plata: "1.250" son 1250 y "50.5"
+/// son 50 y media.
+double? leerDecimal(String texto) {
+  final limpio = texto.trim();
+  final conMiles = RegExp(r'^[1-9]\d{0,2}(\.\d{3})+(,\d+)?$').hasMatch(limpio);
+  return double.tryParse(
+    (conMiles ? limpio.replaceAll('.', '') : limpio).replaceAll(',', '.'),
+  );
+}
 
 /// "María José Peñaloza" -> "MP"; "Jo" -> "J".
 String iniciales(String nombre) {
