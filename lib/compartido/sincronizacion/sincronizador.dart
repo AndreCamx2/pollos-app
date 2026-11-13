@@ -38,8 +38,9 @@ class Sincronizador {
         }
         await _local.quitarPendiente(pendiente);
       } on PostgrestException catch (e) {
-        // PGRST3xx es la sesión vencida, no el dato: se intenta más tarde.
-        if (e.code?.startsWith('PGRST3') ?? false) rethrow;
+        // Solo se marca como rechazado lo que es culpa del dato; lo demás
+        // se intenta más tarde.
+        if (esFallaPasajera(e)) rethrow;
         await _local.rechazar(pendiente, mensajeDeError(e));
       }
     }

@@ -220,6 +220,22 @@ void main() {
     expect((await local.cuentaPendientes(granja)).porSubir, 0);
   });
 
+  test('si el servidor está caído nada queda rechazado y sube al siguiente intento', () async {
+    await guardarGalpon('g4', 'Galpón 4');
+    remoto.rechazos['g4'] = PostgrestException(message: 'Service Unavailable', code: '503');
+
+    await expectLater(sincronizador.sincronizar(granja), throwsA(isA<PostgrestException>()));
+
+    expect(await local.pendientes(granja, rechazados: true), isEmpty);
+    expect((await local.cuentaPendientes(granja)).porSubir, 1);
+
+    remoto.rechazos.clear();
+    await sincronizador.sincronizar(granja);
+
+    expect(remoto.tablas['galpones']!.keys, ['g4']);
+    expect((await local.cuentaPendientes(granja)).porSubir, 0);
+  });
+
   test('corregir una fila rechazada la vuelve a poner en la cola', () async {
     await guardarGalpon('g4', 'Galpón 1');
     remoto.rechazos['g4'] = PostgrestException(message: 'duplicate', code: '23505');
