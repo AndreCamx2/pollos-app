@@ -24,6 +24,7 @@ class RepositorioClientesLocal {
           'telefono': cliente.telefono,
           'precio_libra_sugerido': cliente.precioLibraSugerido,
           'recurrente': cliente.recurrente ? 1 : 0,
+          'cupo_fiado': cliente.cupoFiado,
         },
         titulo: cliente.nombre,
         autor: autor,
@@ -47,6 +48,7 @@ class RepositorioClientesLocal {
             precioLibraSugerido: f['precio_libra_sugerido'] as int?,
             // Null si se bajó antes de que el servidor tuviera la columna.
             recurrente: f['recurrente'] != 0,
+            cupoFiado: f['cupo_fiado'] as int?,
             creadoPor: f['creado_por'] as String?,
           ),
       ];

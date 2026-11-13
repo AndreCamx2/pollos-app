@@ -41,6 +41,7 @@ const columnasLocales = {
     'telefono',
     'precio_libra_sugerido',
     'recurrente',
+    'cupo_fiado',
     ...columnasDeAutoria,
   ],
   'marcas': [
@@ -150,7 +151,7 @@ class BaseLocal {
   static Future<BaseLocal> abrir() async => BaseLocal(
         await openDatabase(
           'pollos.db',
-          version: 4,
+          version: 5,
           onCreate: crearTablas,
           onUpgrade: actualizarTablas,
         ),
@@ -197,6 +198,17 @@ class BaseLocal {
       );
     }
     await crearTablas(db, nueva);
+    // El cupo de fiado llegó en la versión 5. Los clientes se vuelven a bajar
+    // para traer el cupo que otro celular ya les haya puesto.
+    if (anterior >= 2 && anterior < 5) {
+      final columnas = await db.rawQuery('pragma table_info(clientes)');
+      if (!columnas.any((columna) => columna['name'] == 'cupo_fiado')) {
+        await db.execute('alter table clientes add column cupo_fiado');
+      }
+      await db.execute(
+        "delete from datos_guardados where clave like 'bajado:%:clientes'",
+      );
+    }
   }
 
   Future<void> cerrar() => _db.close();

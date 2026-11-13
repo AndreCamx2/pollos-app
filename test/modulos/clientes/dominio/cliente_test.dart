@@ -168,6 +168,43 @@ void main() {
       expect([for (final c in orden) c.cliente.id], ['marta', 'jaime', 'vecino']);
     });
 
+    test('el cupo de fiado avisa en cuánto se pasa y sin cupo no avisa', () {
+      const jaime = Cliente.reconstruir(
+        id: 'jaime',
+        granjaId: 'granja-1',
+        nombre: 'Don Jaime',
+        cupoFiado: 500000,
+      );
+      expect(cuenta(jaime).pasaDelCupo(500000), isNull);
+      expect(cuenta(jaime).pasaDelCupo(620000), 120000);
+      expect(cuenta(marta).pasaDelCupo(9000000), isNull);
+    });
+
+    test('el cupo no puede ser cero', () {
+      expect(
+        () => Cliente.nuevo(id: 'c1', granjaId: 'granja-1', nombre: 'Don Jaime', cupoFiado: 0),
+        throwsA(isA<ClienteInvalido>().having((e) => e.campo, 'campo', 'cupo')),
+      );
+    });
+
+    test('el WhatsApp de quien debe ya lleva el saldo escrito', () {
+      const luz = Cliente.reconstruir(
+        id: 'luz',
+        granjaId: 'granja-1',
+        nombre: 'Luz Marina',
+        telefono: '310 555 1234',
+      );
+      final debe = cuenta(luz, fiado: 120000).enlaceWhatsApp(granja: 'El Porvenir')!;
+      expect(debe.host, 'wa.me');
+      expect(debe.path, '/573105551234');
+      expect(
+        debe.queryParameters['text'],
+        r'Hola Luz Marina, le escribo de El Porvenir. Tiene un saldo pendiente de $120.000.',
+      );
+      expect('${cuenta(luz).enlaceWhatsApp(granja: 'El Porvenir')}', 'https://wa.me/573105551234');
+      expect(cuenta(marta).enlaceWhatsApp(granja: 'El Porvenir'), isNull);
+    });
+
     test('avisa si un cambio deja abonos de más', () {
       expect(() => revisarQueNoQuedeAFavor(marta, -54000), throwsA(isA<ClienteInvalido>()));
       revisarQueNoQuedeAFavor(marta, 0);

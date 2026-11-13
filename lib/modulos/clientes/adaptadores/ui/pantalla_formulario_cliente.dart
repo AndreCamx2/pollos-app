@@ -36,12 +36,14 @@ class _PantallaFormularioClienteState extends ConsumerState<PantallaFormularioCl
   final _detalle = TextEditingController();
   final _telefono = TextEditingController();
   final _precio = TextEditingController();
+  final _cupo = TextEditingController();
   var _recurrente = true;
   CuentaCliente? _original;
   var _guardando = false;
 
   @override
-  String get firma => [_nombre.text, _detalle.text, _telefono.text, _precio.text, _recurrente].join('|');
+  String get firma =>
+      [_nombre.text, _detalle.text, _telefono.text, _precio.text, _cupo.text, _recurrente].join('|');
 
   List<CuentaCliente> get _cuentas =>
       ref.read(cuentasClientesProvider).asData?.value ?? const [];
@@ -53,11 +55,13 @@ class _PantallaFormularioClienteState extends ConsumerState<PantallaFormularioCl
         case final cuenta?) {
       final cliente = cuenta.cliente;
       final precio = cliente.precioLibraSugerido;
+      final cupo = cliente.cupoFiado;
       _original = cuenta;
       _nombre.text = cliente.nombre;
       _detalle.text = cliente.detalle ?? '';
       _telefono.text = cliente.telefono ?? '';
       _precio.text = precio == null ? '' : miles(precio);
+      _cupo.text = cupo == null ? '' : miles(cupo);
       _recurrente = cliente.recurrente;
     }
     // El aviso de nombre repetido aparece mientras la persona escribe.
@@ -69,7 +73,7 @@ class _PantallaFormularioClienteState extends ConsumerState<PantallaFormularioCl
 
   @override
   void dispose() {
-    for (final campo in [_nombre, _detalle, _telefono, _precio]) {
+    for (final campo in [_nombre, _detalle, _telefono, _precio, _cupo]) {
       campo.dispose();
     }
     super.dispose();
@@ -91,6 +95,7 @@ class _PantallaFormularioClienteState extends ConsumerState<PantallaFormularioCl
         telefono: _telefono.text,
         precioLibraSugerido: leerEntero(_precio.text),
         recurrente: _recurrente,
+        cupoFiado: leerEntero(_cupo.text),
       );
       await ref.read(repositorioClientesProvider).guardarCliente(cliente);
       await ref.read(sincronizacionProvider.notifier).huboCambios();
@@ -181,6 +186,17 @@ class _PantallaFormularioClienteState extends ConsumerState<PantallaFormularioCl
                   opcional: true,
                   pista: 'Ej.: 5.600',
                   ayuda: 'Se sugiere en su primera venta; después se usa el de la última.',
+                  teclado: TextInputType.number,
+                  formatos: const [MilesAlEscribir()],
+                ),
+                const SizedBox(height: e16),
+                CampoGranja(
+                  etiqueta: 'Cupo de fiado',
+                  controller: _cupo,
+                  error: errorDe('cupo'),
+                  opcional: true,
+                  pista: 'Ej.: 500.000',
+                  ayuda: 'Hasta cuánto le fías. Si una venta lo pasa, la app avisa pero deja guardarla.',
                   teclado: TextInputType.number,
                   formatos: const [MilesAlEscribir()],
                 ),

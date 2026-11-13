@@ -31,6 +31,7 @@ class Cliente {
     this.telefono,
     this.precioLibraSugerido,
     this.recurrente = true,
+    this.cupoFiado,
     this.creadoPor,
   });
 
@@ -43,6 +44,7 @@ class Cliente {
     String? telefono,
     int? precioLibraSugerido,
     bool recurrente = true,
+    int? cupoFiado,
   }) {
     final limpio = _sinVacio(nombre);
     if (limpio == null) {
@@ -56,6 +58,15 @@ class Cliente {
         'Más de \$100.000 la libra no parece correcto. Revisa la cifra.',
         campo: 'precio',
       );
+    }
+    if (cupoFiado != null && cupoFiado <= 0) {
+      throw const ClienteInvalido(
+        'El cupo debe ser mayor que cero. Déjalo vacío si no le pones tope.',
+        campo: 'cupo',
+      );
+    }
+    if (cupoFiado != null && cupoFiado > Topes.plata) {
+      throw const ClienteInvalido('Ese cupo es demasiado alto. Revisa la cifra.', campo: 'cupo');
     }
     final digitos = telefono?.replaceAll(RegExp(r'\D'), '') ?? '';
     if (digitos.isNotEmpty && (digitos.length != 10 || !digitos.startsWith('3'))) {
@@ -74,6 +85,7 @@ class Cliente {
           : '${digitos.substring(0, 3)} ${digitos.substring(3, 6)} ${digitos.substring(6)}',
       precioLibraSugerido: precioLibraSugerido,
       recurrente: recurrente,
+      cupoFiado: cupoFiado,
     );
   }
 
@@ -91,6 +103,9 @@ class Cliente {
   /// Los que compraron una vez y no se espera que vuelvan van al final de
   /// las listas.
   final bool recurrente;
+
+  /// Hasta cuánto se le fía; null es sin tope. Pasarlo solo da un aviso.
+  final int? cupoFiado;
   final String? creadoPor;
 
   bool puedeCambiarlo({required bool administra, required String? usuarioId}) =>
@@ -208,6 +223,30 @@ class CuentaCliente {
 
   /// Un cliente con ventas o abonos no se borra: se perderían sus cuentas.
   bool get sePuedeBorrar => ventas == 0 && abonos.isEmpty;
+
+  /// En cuánto se pasaría del cupo si quedara debiendo [debeDespues]; null
+  /// si no tiene cupo o no lo pasa.
+  int? pasaDelCupo(int debeDespues) {
+    final cupo = cliente.cupoFiado;
+    return cupo == null || debeDespues <= cupo ? null : debeDespues - cupo;
+  }
+
+  /// Para escribirle por WhatsApp; null si no tiene celular. Si debe, el
+  /// mensaje ya lleva el saldo y solo falta enviarlo.
+  Uri? enlaceWhatsApp({required String granja}) {
+    final celular = cliente.telefono?.replaceAll(' ', '');
+    if (celular == null) return null;
+    return Uri.https(
+      'wa.me',
+      '/57$celular',
+      alDia
+          ? null
+          : {
+              'text': 'Hola ${cliente.nombre}, le escribo de $granja. '
+                  'Tiene un saldo pendiente de ${plata(debe)}.',
+            },
+    );
+  }
 
   /// Lo que debe sin contar [abono], para corregirlo sin contarlo dos veces.
   int debeSin(Abono? abono) => debe + (abono?.valor ?? 0);
