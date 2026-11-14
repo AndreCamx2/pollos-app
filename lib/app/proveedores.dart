@@ -185,6 +185,29 @@ final miembrosProvider =
   ];
 });
 
+/// Los códigos para unirse que nadie ha usado y no han vencido. Solo los
+/// reciben el dueño y los administradores; a los demás la base no les
+/// entrega ninguno.
+final invitacionesProvider =
+    FutureProvider.autoDispose.family<List<Invitacion>, String>((ref, granjaId) async {
+  final filas = await ref
+      .watch(supabaseProvider)
+      .from('invitaciones')
+      .select('codigo, rol, vence_en')
+      .eq('granja_id', granjaId)
+      .isFilter('usada_en', null)
+      .gt('vence_en', DateTime.now().toUtc().toIso8601String())
+      .order('vence_en');
+  return [
+    for (final fila in filas)
+      (
+        codigo: fila['codigo'] as String,
+        rol: _rol(fila['rol']),
+        venceEn: DateTime.parse(fila['vence_en'] as String).toLocal(),
+      ),
+  ];
+});
+
 /// Sube de número cada vez que cambia algo en la base local, sea porque la
 /// persona guardó o porque llegó algo del servidor. Lo que se lee de la base
 /// local lo observa para volver a leer.

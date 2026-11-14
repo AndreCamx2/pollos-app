@@ -31,6 +31,12 @@ void main() {
     });
   });
 
+  test('la granja no puede quedar sin nombre ni con uno larguísimo', () {
+    expect(errorDeNombreDeGranja('  '), 'Escribe el nombre de la granja.');
+    expect(errorDeNombreDeGranja('Granja La Esperanza'), isNull);
+    expect(errorDeNombreDeGranja('Granja ${'muy ' * 12}larga'), 'Usa máximo 40 letras.');
+  });
+
   group('Contraseña nueva', () {
     test('gallinas88 cumple todo', () {
       expect(errorDeClaveNueva('gallinas88'), isNull);
