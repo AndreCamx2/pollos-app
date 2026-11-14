@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/aviso_sincronizacion.dart';
+import '../../../../app/aviso_version_nueva.dart';
 import '../../../../app/proveedores.dart';
 import '../../../../compartido/diseno/barra_etapa.dart';
 import '../../../../compartido/diseno/cargando.dart';
@@ -62,6 +63,7 @@ class PantallaGalpones extends ConsumerWidget {
               child: AvisoSincronizacion(),
             ),
           ),
+          const AvisoVersionNueva(),
           ...galpones.when<List<Widget>>(
             skipLoadingOnReload: true,
             loading: () => const [Cargando()],
