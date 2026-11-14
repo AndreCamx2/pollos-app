@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app/proveedores.dart';
@@ -11,6 +12,10 @@ import 'compartido/local/base_local.dart';
 const _url = String.fromEnvironment('SUPABASE_URL');
 const _clave = String.fromEnvironment('SUPABASE_KEY');
 
+// La dirección de Sentry a donde llegan los errores de la app. Sin ella la
+// app corre igual y no reporta nada.
+const _sentry = String.fromEnvironment('SENTRY_DSN');
+
 Future<void> main() async {
   if (_url.isEmpty || _clave.isEmpty) {
     throw StateError(
@@ -18,6 +23,11 @@ Future<void> main() async {
       '--dart-define-from-file=.env.json (mira .env.example).',
     );
   }
+  if (_sentry.isEmpty) return _arrancar();
+  await SentryFlutter.init((opciones) => opciones.dsn = _sentry, appRunner: _arrancar);
+}
+
+Future<void> _arrancar() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Supabase.initialize(url: _url, publishableKey: _clave);
   final baseLocal = await BaseLocal.abrir();

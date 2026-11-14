@@ -3,6 +3,17 @@
 Cada versión corresponde a una parte del proyecto. El número de la derecha del
 `+` en `pubspec.yaml` sube con cada APK que se instala.
 
+## 1.5.0 · Por dentro
+
+- Cuando hay una versión más nueva publicada en GitHub, la app avisa en
+  Galpones y lleva a la página para descargarla.
+- Lo que anotan los demás baja cada tres minutos con la app abierta, sin
+  tener que salir y volver a entrar.
+- GitHub revisa el código y corre las pruebas de la app en cada cambio
+  (`.github/workflows/app.yml`).
+- Los errores de la app se reportan a Sentry si `SENTRY_DSN` está en el
+  archivo de claves; sin él, la app corre igual y no reporta.
+
 ## 1.4.0 · Recordatorios
 
 - El celular avisa a las 7 de la mañana el día 22 de cada lote, para pasar a
