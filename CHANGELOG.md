@@ -3,6 +3,13 @@
 Cada versión corresponde a una parte del proyecto. El número de la derecha del
 `+` en `pubspec.yaml` sube con cada APK que se instala.
 
+## 1.2.0 · Cuenta
+
+- Cada persona cambia su contraseña desde Personas, sin pedírsela al dueño.
+- El dueño y los administradores ven los códigos de invitación sin usar y
+  anulan el que ya no haga falta.
+- El dueño y los administradores cambian el nombre de la granja.
+
 ## 1.1.0 · Cartera
 
 - Cada cliente puede tener un cupo de fiado. Si una venta fiada lo pasa, la
