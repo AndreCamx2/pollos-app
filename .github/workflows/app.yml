@@ -1,0 +1,23 @@
+name: App
+
+# Revisa el código de la app y corre sus pruebas en cada cambio, para que a
+# main no entre nada que no pase.
+on:
+  push:
+    paths: ['lib/**', 'test/**', 'pubspec.*', 'analysis_options.yaml', '.github/workflows/app.yml']
+  pull_request:
+    paths: ['lib/**', 'test/**', 'pubspec.*', 'analysis_options.yaml', '.github/workflows/app.yml']
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
