@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app/proveedores.dart';
+import 'app/recordatorios.dart';
 import 'app/rutas.dart';
 import 'compartido/diseno/tema.dart';
 import 'compartido/local/base_local.dart';
@@ -33,6 +34,7 @@ class AppPollos extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(recordatoriosProvider);
     return MaterialApp.router(
       title: 'Mis pollos',
       theme: temaGranja(),

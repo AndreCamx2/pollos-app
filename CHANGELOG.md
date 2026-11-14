@@ -3,6 +3,16 @@
 Cada versión corresponde a una parte del proyecto. El número de la derecha del
 `+` en `pubspec.yaml` sube con cada APK que se instala.
 
+## 1.4.0 · Recordatorios
+
+- El celular avisa a las 7 de la mañana el día 22 de cada lote, para pasar a
+  alimento de engorde, y el día 45, para vender. Les llega a todos los de la
+  granja, con la app cerrada y sin señal.
+- Si ya se compró engorde, el aviso del día 22 no sale. Un lote cerrado deja
+  de avisar.
+- Android: sube a AGP 9.1.1 y compila con Android 37, que es lo que piden
+  los avisos.
+
 ## 1.3.0 · Cierre en PDF
 
 - El cierre de un lote, o cómo va uno abierto, sale en una hoja en PDF con la
