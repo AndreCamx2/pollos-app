@@ -30,6 +30,13 @@ String? errorDeNombre(String nombre) {
   return null;
 }
 
+String? errorDeNombreDeGranja(String nombre) {
+  final limpio = nombre.trim();
+  if (limpio.isEmpty) return 'Escribe el nombre de la granja.';
+  if (limpio.length > 40) return 'Usa máximo 40 letras.';
+  return null;
+}
+
 /// Lo que se va marcando en verde mientras la persona escribe.
 ({bool largo, bool letrasYNumeros}) requisitosDeClave(String clave) => (
       largo: clave.length >= 8,

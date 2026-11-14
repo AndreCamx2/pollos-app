@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../app/proveedores.dart';
 import '../../../../app/sincronizacion.dart';
+import '../../../../compartido/diseno/campo.dart';
 import '../../../../compartido/diseno/cargando.dart';
 import '../../../../compartido/diseno/colores.dart';
 import '../../../../compartido/diseno/espacios.dart';
@@ -16,6 +17,7 @@ import '../../../../compartido/diseno/pulsable.dart';
 import '../../../../compartido/diseno/tema.dart';
 import '../../../../compartido/errores.dart';
 import '../../../../compartido/formato.dart';
+import '../../dominio/cuenta.dart';
 import '../../dominio/granja.dart';
 
 class PantallaPersonas extends ConsumerWidget {
@@ -104,10 +106,25 @@ class PantallaPersonas extends ConsumerWidget {
                           isScrollControlled: true,
                           sheetAnimationStyle: animacionDeHoja,
                           builder: (_) => _HojaInvitar(granjaId: granja.id),
+                        ).whenComplete(() => ref.invalidate(invitacionesProvider(granja.id))),
+                      ),
+                      _Invitaciones(granjaId: granja.id),
+                    ],
+                    const SizedBox(height: e24),
+                    if (granja.rol.administra)
+                      Center(
+                        child: TextButton(
+                          onPressed: () => _abrirHoja(context, _HojaNombreGranja(granja: granja)),
+                          child: const Text('Cambiar el nombre de la granja'),
                         ),
                       ),
-                    ],
-                    const SizedBox(height: 32),
+                    Center(
+                      child: TextButton(
+                        onPressed: () => _abrirHoja(context, const _HojaClave()),
+                        child: const Text('Cambiar mi contraseña'),
+                      ),
+                    ),
+                    const SizedBox(height: e16),
                     Center(
                       child: TextButton(
                         onPressed: () => _salir(context, ref, granja),
@@ -131,6 +148,13 @@ class PantallaPersonas extends ConsumerWidget {
     );
   }
 }
+
+Future<void> _abrirHoja(BuildContext context, Widget hoja) => showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      sheetAnimationStyle: animacionDeHoja,
+      builder: (_) => hoja,
+    );
 
 /// Lo que se anotó en este celular y todavía no está en el servidor.
 int _sinSubir(WidgetRef ref) {
@@ -507,6 +531,238 @@ class _OpcionRol extends StatelessWidget {
               Text(ayuda, style: textos.bodySmall),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Los códigos que se crearon y nadie ha usado, para anular el que se le dio
+/// a quien ya no va a entrar.
+class _Invitaciones extends ConsumerWidget {
+  const _Invitaciones({required this.granjaId});
+
+  final String granjaId;
+
+  Future<void> _anular(BuildContext context, WidgetRef ref, Invitacion invitacion) async {
+    final anula = await confirmar(
+      context,
+      titulo: '¿Anular el código ${invitacion.codigo}?',
+      detalle: 'Quien lo tenga ya no podrá unirse con él. Si hace falta, creas otro.',
+      accion: 'Anular código',
+    );
+    if (!anula) return;
+    try {
+      await ref.read(supabaseProvider).from('invitaciones').delete().eq('codigo', invitacion.codigo);
+      ref.invalidate(invitacionesProvider(granjaId));
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(mensajeDeError(e))));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final textos = Theme.of(context).textTheme;
+    final invitaciones =
+        ref.watch(invitacionesProvider(granjaId)).asData?.value ?? const <Invitacion>[];
+    if (invitaciones.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: e20),
+        Text('CÓDIGOS SIN USAR', style: textos.labelLarge),
+        for (final invitacion in invitaciones)
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(invitacion.codigo, style: textos.titleMedium!.copyWith(letterSpacing: 2)),
+                    Text(
+                      'Para ${invitacion.rol.etiqueta.toLowerCase()} · '
+                      'vence el ${fechaCorta(invitacion.venceEn)}',
+                      style: textos.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              TextButton(
+                onPressed: () => _anular(context, ref, invitacion),
+                child: const Text('Anular'),
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+}
+
+class _HojaNombreGranja extends ConsumerStatefulWidget {
+  const _HojaNombreGranja({required this.granja});
+
+  final Granja granja;
+
+  @override
+  ConsumerState<_HojaNombreGranja> createState() => _HojaNombreGranjaState();
+}
+
+class _HojaNombreGranjaState extends ConsumerState<_HojaNombreGranja> {
+  late final _nombre = TextEditingController(text: widget.granja.nombre);
+  var _guardando = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _nombre.dispose();
+    super.dispose();
+  }
+
+  Future<void> _guardar() async {
+    final nombre = _nombre.text.trim();
+    setState(() => _error = errorDeNombreDeGranja(nombre));
+    if (_error != null) return;
+    setState(() => _guardando = true);
+    try {
+      final filas = await ref
+          .read(supabaseProvider)
+          .from('granjas')
+          .update({'nombre': nombre})
+          .eq('id', widget.granja.id)
+          .select();
+      // Sin filas es que la política no lo dejó: quizás ya no administra.
+      if (filas.isEmpty) throw const _SinPermiso();
+      ref.invalidate(misGranjasProvider);
+      if (mounted) Navigator.pop(context);
+    } on _SinPermiso {
+      if (mounted) {
+        setState(() => _error = 'Solo el dueño o un administrador cambian el nombre.');
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = mensajeDeError(e));
+    } finally {
+      if (mounted) setState(() => _guardando = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(e20, 0, e20, e16 + MediaQuery.viewInsetsOf(context).bottom),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            CampoGranja(
+              etiqueta: 'Nombre de la granja',
+              controller: _nombre,
+              error: _error,
+              mayusculas: TextCapitalization.words,
+              accionTeclado: TextInputAction.done,
+              alTerminar: (_) => _guardar(),
+            ),
+            const SizedBox(height: e20),
+            BotonPrincipal(texto: 'Guardar el nombre', cargando: _guardando, onPressed: _guardar),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HojaClave extends ConsumerStatefulWidget {
+  const _HojaClave();
+
+  @override
+  ConsumerState<_HojaClave> createState() => _HojaClaveState();
+}
+
+class _HojaClaveState extends ConsumerState<_HojaClave> {
+  final _clave = TextEditingController();
+  final _repetida = TextEditingController();
+  var _guardando = false;
+  String? _errorClave;
+  String? _errorRepetida;
+  String? _error;
+
+  @override
+  void dispose() {
+    _clave.dispose();
+    _repetida.dispose();
+    super.dispose();
+  }
+
+  Future<void> _guardar() async {
+    setState(() {
+      _errorClave = errorDeClaveNueva(_clave.text);
+      _errorRepetida =
+          _errorClave == null ? errorDeClaveRepetida(_clave.text, _repetida.text) : null;
+      _error = null;
+    });
+    if (_errorClave != null || _errorRepetida != null) return;
+    setState(() => _guardando = true);
+    final avisos = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(supabaseProvider).auth.updateUser(UserAttributes(password: _clave.text));
+      if (!mounted) return;
+      Navigator.pop(context);
+      avisos.showSnackBar(const SnackBar(content: Text('Tu contraseña quedó cambiada.')));
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      setState(
+        () => _error = e.code == 'same_password'
+            ? 'Esa es la contraseña que ya tienes. Escribe una distinta.'
+            : mensajeDeError(e),
+      );
+    } catch (e) {
+      if (mounted) setState(() => _error = mensajeDeError(e));
+    } finally {
+      if (mounted) setState(() => _guardando = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(e20, 0, e20, e16 + MediaQuery.viewInsetsOf(context).bottom),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            CampoGranja(
+              etiqueta: 'Contraseña nueva',
+              controller: _clave,
+              clave: true,
+              error: _errorClave,
+              ayuda: 'Al menos 8 caracteres, con letras y números.',
+              autollenado: const [AutofillHints.newPassword],
+              accionTeclado: TextInputAction.next,
+            ),
+            const SizedBox(height: e16),
+            CampoGranja(
+              etiqueta: 'Repite la contraseña',
+              controller: _repetida,
+              clave: true,
+              error: _errorRepetida,
+              autollenado: const [AutofillHints.newPassword],
+              accionTeclado: TextInputAction.done,
+              alTerminar: (_) => _guardar(),
+            ),
+            if (_error case final error?) ...[
+              const SizedBox(height: e12),
+              AvisoError(error),
+            ],
+            const SizedBox(height: e20),
+            BotonPrincipal(
+              texto: 'Cambiar contraseña',
+              cargando: _guardando,
+              onPressed: _guardar,
+            ),
+          ],
         ),
       ),
     );
