@@ -27,7 +27,8 @@ typedef EstadoSincronizacion = ({
 });
 
 /// Sincroniza la granja actual al abrir la app, al volver a ella, después de
-/// cada cambio y cada medio minuto mientras quede algo por subir.
+/// cada cambio, cada medio minuto mientras quede algo por subir y cada tres
+/// minutos para traer lo que anotaron los demás.
 class Sincronizacion extends Notifier<EstadoSincronizacion> {
   var _trabajando = false;
   var _pidieronOtra = false;
@@ -38,8 +39,10 @@ class Sincronizacion extends Notifier<EstadoSincronizacion> {
   EstadoSincronizacion build() {
     final granjaId = ref.watch(granjaActualProvider.select((g) => g?.id));
     if (granjaId != null) {
+      var vueltas = 0;
       final reloj = Timer.periodic(const Duration(seconds: 30), (_) {
-        if (state.porSubir > 0) sincronizar();
+        vueltas++;
+        if (state.porSubir > 0 || vueltas % 6 == 0) sincronizar();
       });
       final alVolver = AppLifecycleListener(onResume: sincronizar);
       ref.onDispose(() {
