@@ -20,6 +20,7 @@ import '../../../../compartido/formato.dart';
 import '../../../clientes/dominio/cliente.dart';
 import '../../../registros/dominio/cuentas_lote.dart';
 import '../../dominio/cierres.dart';
+import '../pdf/cierre_en_pdf.dart';
 
 /// Cómo le fue a un lote: cuánto se ganó, en qué se invirtió, cómo murieron
 /// los pollos y a quién se le vendió. Con el lote abierto muestra cómo va.
@@ -88,8 +89,17 @@ class PantallaCierreLote extends ConsumerWidget {
             ),
           Padding(
             padding: const EdgeInsets.fromLTRB(e16, e24, e16, 0),
+            child: _BotonPdf(
+              cuentas: cuentas,
+              granja: ref.watch(granjaActualProvider)?.nombre ?? 'Mis pollos',
+              galpon: galpon,
+              clientes: clientes,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(e16, e12, e16, 0),
             child: BotonSecundario(
-              texto: 'Compartir resumen',
+              texto: 'Compartir resumen en texto',
               onPressed: () => SharePlus.instance.share(
                 ShareParams(
                   text: textoParaCompartir(cuentas, galpon: galpon, clientes: clientes, hoy: hoy),
@@ -100,6 +110,69 @@ class PantallaCierreLote extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Arma el cierre en PDF y abre el menú de compartir del celular, donde
+/// está WhatsApp.
+class _BotonPdf extends StatefulWidget {
+  const _BotonPdf({
+    required this.cuentas,
+    required this.granja,
+    required this.galpon,
+    required this.clientes,
+  });
+
+  final CuentasLote cuentas;
+  final String granja;
+  final String galpon;
+  final Map<String, String> clientes;
+
+  @override
+  State<_BotonPdf> createState() => _BotonPdfState();
+}
+
+class _BotonPdfState extends State<_BotonPdf> {
+  var _armando = false;
+
+  Future<void> _enviar() async {
+    final avisos = ScaffoldMessenger.of(context);
+    final hoy = DateTime.now();
+    setState(() => _armando = true);
+    try {
+      final pdf = await cierreEnPdf(
+        widget.cuentas,
+        granja: widget.granja,
+        galpon: widget.galpon,
+        clientes: widget.clientes,
+        hoy: hoy,
+      );
+      final nombre = nombreDelPdf(
+        widget.galpon,
+        widget.cuentas.lote.cerradoEn?.toLocal() ?? hoy,
+      );
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile.fromData(pdf, mimeType: 'application/pdf', name: nombre)],
+          fileNameOverrides: [nombre],
+        ),
+      );
+    } on Exception {
+      avisos.showSnackBar(
+        const SnackBar(content: Text('No se pudo armar el PDF. Intenta de nuevo.')),
+      );
+    } finally {
+      if (mounted) setState(() => _armando = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BotonPrincipal(
+      texto: 'Enviar el cierre en PDF',
+      cargando: _armando,
+      onPressed: _enviar,
     );
   }
 }
