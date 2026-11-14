@@ -3,6 +3,13 @@
 Cada versión corresponde a una parte del proyecto. El número de la derecha del
 `+` en `pubspec.yaml` sube con cada APK que se instala.
 
+## 1.3.0 · Cierre en PDF
+
+- El cierre de un lote, o cómo va uno abierto, sale en una hoja en PDF con la
+  ganancia, la inversión, los pollos, los indicadores y a quién se le vendió.
+  Se envía por WhatsApp o por donde se quiera desde el menú de compartir.
+- El resumen en texto sigue ahí.
+
 ## 1.2.0 · Cuenta
 
 - Cada persona cambia su contraseña desde Personas, sin pedírsela al dueño.
